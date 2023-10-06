@@ -23,6 +23,10 @@ extern "C" {
 
 #pragma GCC optimize("Ofast")
 
+#ifndef OVERCLOCKING
+#define OVERCLOCKING 270
+#endif
+
 #define FLASH_TARGET_OFFSET (900 * 1024)
 static constexpr uintptr_t rom = (XIP_BASE + FLASH_TARGET_OFFSET);
 
@@ -54,12 +58,11 @@ void draw_text(char *text, uint8_t x, uint8_t y, uint8_t color, uint8_t bgcolor)
  * Load a .gb rom file in flash from the SD card
  */
 void load_cart_rom_file(char *filename) {
-    extern unsigned char VRAM[];
     FIL fil;
     FRESULT fr;
 
-    size_t bufsize = VRAM_MAX_SIZE;
-    BYTE *buffer = (BYTE *) VRAM;
+    size_t bufsize = sizeof(SCREEN)&0xfffff000;
+    BYTE *buffer = (BYTE *) SCREEN;
     auto ofs = FLASH_TARGET_OFFSET;
     printf("Writing %s rom to flash %x\r\n", filename, ofs);
     fr = f_open(&fil, filename, FA_READ);
@@ -559,7 +562,7 @@ int main() {
     hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
     sleep_ms(33);
 
-    set_sys_clock_khz(396*1000, true);
+    set_sys_clock_khz(OVERCLOCKING * 1000, true);
 
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
