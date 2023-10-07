@@ -136,7 +136,7 @@ uint16_t rom_file_selector_display_page(char filename[28][256], uint16_t num_pag
 
     /* search *.gb files */
     uint16_t num_file = 0;
-    fr = f_findfirst(&dj, &fno, "SEGA\\", "*.gen");
+    fr = f_findfirst(&dj, &fno, "SEGA\\", "*");
 
     /* skip the first N pages */
     if (num_page > 0) {
@@ -314,7 +314,7 @@ void __time_critical_func(render_loop)() {
                 }
                 break;
             case RESOLUTION_NATIVE:
-                if (y <= screen_height) {
+                if (y < screen_height) {
                     for (uint_fast16_t x = 0; x < (screen_width << 1); x += 2) {
                         (uint16_t &) linebuf->line[x] = X2(SCREEN[y][x >> 1]);
                     }
