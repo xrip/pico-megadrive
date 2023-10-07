@@ -1,6 +1,6 @@
 # Raspberry Pi Pico Sega Megardrive / Sega Genesis emulator for MURMULATOR devboard
 
-Sega Megardrive / Sega Genesis emulator based on [Gwenesis Emulator](https://github.com/bzhxx/gwenesis) for [MURMULATOR](https://github.com/AlexEkb4ever/MURMULATOR_classical_scheme) devboard
+Sega Megardrive / Sega Genesis emulator based on [Gwenesis Emulator](https://github.com/bzhxx/gwenesis) for RP2040 based [MURMULATOR](https://github.com/AlexEkb4ever/MURMULATOR_classical_scheme) devboard
 
 Murmulator devboard have MicroSD card slot, PS/2 keyboard input and VGA output
 
