@@ -119,12 +119,12 @@ __not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const *report, hid
         printf("%2.2X", i);
     printf("\r\n");
      */
-    keyboard_bits.start = isInReport(report, HID_KEY_ENTER);
+    keyboard_bits.c = isInReport(report, HID_KEY_ENTER);
     keyboard_bits.mode = isInReport(report, HID_KEY_BACKSPACE);
     keyboard_bits.a = isInReport(report, HID_KEY_A);
     keyboard_bits.b = isInReport(report, HID_KEY_S);
-    keyboard_bits.c = isInReport(report, HID_KEY_D);
-    keyboard_bits.x + isInReport(report, HID_KEY_Z);
+    keyboard_bits.start = isInReport(report, HID_KEY_D);
+    keyboard_bits.x = isInReport(report, HID_KEY_Z);
     keyboard_bits.y = isInReport(report, HID_KEY_X);
     keyboard_bits.z = isInReport(report, HID_KEY_C);
     keyboard_bits.up = isInReport(report, HID_KEY_ARROW_UP);
