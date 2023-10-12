@@ -80,9 +80,9 @@ enum gwenesis_bus_pad_button
     PAD_LEFT,
     PAD_RIGHT,
     PAD_B,
-    PAD_C,
+    PAD_S,
     PAD_A,
-    PAD_S
+    PAD_C,
 };
 
 void load_cartridge(uintptr_t rom);

@@ -17,6 +17,7 @@ extern "C" {
 
 #include "vga.h"
 #include "nespad.h"
+#include "ps2kbd_mrmltr.h"
 #include "f_util.h"
 #include "ff.h"
 #include "VGA_ROM_F16.h"
@@ -42,6 +43,102 @@ typedef enum {
     RESOLUTION_TEXTMODE,
 } resolution_t;
 resolution_t resolution = RESOLUTION_NATIVE;
+
+enum input_device {
+    KEYBOARD,
+    GAMEPAD1,
+    GAMEPAD2,
+};
+
+// SETTINGS
+bool show_fps = true;
+bool limit_fps = true;
+bool interlace = true;
+bool frameskip = true;
+
+
+bool reboot = false;
+
+uint8_t player_1_input = GAMEPAD1;
+uint8_t player_2_input = KEYBOARD;
+
+typedef struct  __attribute__((__packed__)) {
+    bool a: 1;
+    bool b: 1;
+    bool c: 1;
+    bool x: 1;
+    bool y: 1;
+    bool z: 1;
+    bool mode: 1;
+    bool start: 1;
+    bool right: 1;
+    bool left: 1;
+    bool up: 1;
+    bool down: 1;
+} input_bits_t;
+
+static input_bits_t keyboard_bits = {};
+static input_bits_t gamepad1_bits = {};
+static input_bits_t gamepad2_bits = {};
+
+void nespad_tick() {
+    nespad_read();
+
+    gamepad1_bits.a = (nespad_state & DPAD_A) != 0;
+    gamepad1_bits.b = (nespad_state & DPAD_B) != 0;
+    gamepad1_bits.c = (nespad_state & DPAD_SELECT) != 0;
+    gamepad1_bits.start = (nespad_state & DPAD_START) != 0;
+    gamepad1_bits.up = (nespad_state & DPAD_UP) != 0;
+    gamepad1_bits.down = (nespad_state & DPAD_DOWN) != 0;
+    gamepad1_bits.left = (nespad_state & DPAD_LEFT) != 0;
+    gamepad1_bits.right = (nespad_state & DPAD_RIGHT) != 0;
+
+    gamepad2_bits.a = (nespad_state2 & DPAD_A) != 0;
+    gamepad2_bits.b = (nespad_state2 & DPAD_B) != 0;
+    gamepad2_bits.c = (nespad_state2 & DPAD_SELECT) != 0;
+    gamepad2_bits.start = (nespad_state2 & DPAD_START) != 0;
+    gamepad2_bits.up = (nespad_state2 & DPAD_UP) != 0;
+    gamepad2_bits.down = (nespad_state2 & DPAD_DOWN) != 0;
+    gamepad2_bits.left = (nespad_state2 & DPAD_LEFT) != 0;
+    gamepad2_bits.right = (nespad_state2 & DPAD_RIGHT) != 0;
+}
+
+static bool isInReport(hid_keyboard_report_t const *report, const unsigned char keycode) {
+    for (unsigned char i: report->keycode) {
+        if (i == keycode) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void
+__not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const *report, hid_keyboard_report_t const *prev_report) {
+    /* printf("HID key report modifiers %2.2X report ", report->modifier);
+    for (unsigned char i: report->keycode)
+        printf("%2.2X", i);
+    printf("\r\n");
+     */
+    keyboard_bits.start = isInReport(report, HID_KEY_ENTER);
+    keyboard_bits.mode = isInReport(report, HID_KEY_BACKSPACE);
+    keyboard_bits.a = isInReport(report, HID_KEY_A);
+    keyboard_bits.b = isInReport(report, HID_KEY_S);
+    keyboard_bits.c = isInReport(report, HID_KEY_D);
+    keyboard_bits.x + isInReport(report, HID_KEY_Z);
+    keyboard_bits.y = isInReport(report, HID_KEY_X);
+    keyboard_bits.z = isInReport(report, HID_KEY_C);
+    keyboard_bits.up = isInReport(report, HID_KEY_ARROW_UP);
+    keyboard_bits.down = isInReport(report, HID_KEY_ARROW_DOWN);
+    keyboard_bits.left = isInReport(report, HID_KEY_ARROW_LEFT);
+    keyboard_bits.right = isInReport(report, HID_KEY_ARROW_RIGHT);
+    //-------------------------------------------------------------------------
+}
+
+Ps2Kbd_Mrmltr ps2kbd(
+        pio1,
+        0,
+        process_kbd_report);
+
 
 int start_time = 0;
 int frame, frame_cnt = 0;
@@ -183,25 +280,25 @@ void rom_file_selector() {
     draw_text(filenames[selected], 0, selected, 0xFF, 0xF8);
 
     while (true) {
-        nespad_read();
+        ps2kbd.tick();
+        nespad_tick();
         sleep_ms(33);
-        nespad_read();
+        nespad_tick();
 //-----------------------------------------------------------------------------
 
-        if (nespad_state & DPAD_SELECT) {
-            // Disable interupts, erase, flash and enable interrupts
+        if (keyboard_bits.mode || gamepad1_bits.c) {
             gpio_put(PICO_DEFAULT_LED_PIN, true);
             break;
         }
 //-----------------------------------------------------------------------------
-        if ((nespad_state & DPAD_START) != 0 || (nespad_state & DPAD_A) != 0 || (nespad_state & DPAD_B) != 0) {
+        if (keyboard_bits.start || gamepad1_bits.start || gamepad1_bits.a || gamepad1_bits.b) {
             /* copy the rom from the SD card to flash and start the game */
             char pathname[255];
             sprintf(pathname, "SEGA\\%s", filenames[selected]);
             load_cart_rom_file(pathname);
             break;
         }
-        if ((nespad_state & DPAD_DOWN) != 0) {
+        if (keyboard_bits.down || gamepad1_bits.down) {
             /* select the next rom */
             draw_text(filenames[selected], 0, selected, 0xFF, 0x00);
             selected++;
@@ -211,7 +308,7 @@ void rom_file_selector() {
             printf("Rom %s\r\n", filenames[selected]);
             sleep_ms(150);
         }
-        if ((nespad_state & DPAD_UP) != 0) {
+        if (keyboard_bits.up || gamepad1_bits.up) {
             /* select the previous rom */
             draw_text(filenames[selected], 0, selected, 0xFF, 0x00);
             if (selected == 0) {
@@ -223,7 +320,7 @@ void rom_file_selector() {
             printf("Rom %s\r\n", filenames[selected]);
             sleep_ms(150);
         }
-        if ((nespad_state & DPAD_RIGHT) != 0) {
+        if (keyboard_bits.right || gamepad1_bits.right) {
             /* select the next page */
             num_page++;
             numfiles = rom_file_selector_display_page(filenames, num_page);
@@ -237,7 +334,7 @@ void rom_file_selector() {
             draw_text(filenames[selected], 0, selected, 0xFF, 0xF8);
             sleep_ms(150);
         }
-        if ((nespad_state & DPAD_LEFT) != 0 && num_page > 0) {
+        if ((keyboard_bits.left || gamepad1_bits.left) && num_page > 0) {
             /* select the previous page */
             num_page--;
             numfiles = rom_file_selector_display_page(filenames, num_page);
@@ -255,32 +352,7 @@ void rom_file_selector() {
 /* Clocks and synchronization */
 /* system clock is video clock */
 int system_clock;
-extern unsigned short button_state[3];
 
-void gwenesis_io_get_buttons() {
-    nespad_read();
-    button_state[0] = ((nespad_state & DPAD_LEFT) != 0) << PAD_LEFT |
-                      ((nespad_state & DPAD_RIGHT) != 0) << PAD_RIGHT |
-                      ((nespad_state & DPAD_UP) != 0) << PAD_UP |
-                      ((nespad_state & DPAD_DOWN) != 0) << PAD_DOWN |
-                      ((nespad_state & DPAD_START) != 0) << PAD_S |
-                      ((nespad_state & DPAD_A) != 0) << PAD_A |
-                      ((nespad_state & DPAD_B) != 0) << PAD_B |
-                      ((nespad_state & DPAD_SELECT) != 0) << PAD_C;
-
-    button_state[0] = ~button_state[0];
-
-    button_state[1] = ((nespad_state2 & DPAD_LEFT) != 0) << PAD_LEFT |
-                      ((nespad_state2 & DPAD_RIGHT) != 0) << PAD_RIGHT |
-                      ((nespad_state2 & DPAD_UP) != 0) << PAD_UP |
-                      ((nespad_state2 & DPAD_DOWN) != 0) << PAD_DOWN |
-                      ((nespad_state2 & DPAD_START) != 0) << PAD_S |
-                      ((nespad_state2 & DPAD_A) != 0) << PAD_A |
-                      ((nespad_state2 & DPAD_B) != 0) << PAD_B |
-                      ((nespad_state2 & DPAD_SELECT) != 0) << PAD_C;
-
-    button_state[1] = ~button_state[1];
-}
 
 unsigned int lines_per_frame = LINES_PER_FRAME_NTSC; //262; /* NTSC: 262, PAL: 313 */
 unsigned int scan_line;
@@ -327,19 +399,21 @@ void __time_critical_func(render_loop)() {
             case RESOLUTION_NATIVE:
                 if (y < screen_height) {
                     for (uint_fast16_t x = 0; x < (screen_width << 1); x += 2) {
-                        (uint16_t &) linebuf->line[x] = X2(SCREEN[y][x >> 1]);
+                        (uint16_t &) linebuf->line[(screen_width == 320 ? 0 : 32) + x] = X2(SCREEN[y][x >> 1]);
                     }
                 } else {
                     memset(linebuf->line, 0, 640);
                 }
                 // SHOW FPS
-                if (y < 16) {
+                if (show_fps && y < 16) {
                     for (uint8_t x = 77; x < 80; x++) {
                         uint8_t glyph_row = VGA_ROM_F16[(textmode[y / 16][x] * 16) + y % 16];
                         for (uint8_t bit = 0; bit < 8; bit++) {
                             if (CHECK_BIT(glyph_row, bit)) {
                                 // FOREGROUND
                                 linebuf->line[8 * x + bit] = 11;
+                            } else if (screen_width != 320) {
+                                linebuf->line[8 * x + bit] = 0;
                             }
                         }
                     }
@@ -351,33 +425,40 @@ void __time_critical_func(render_loop)() {
 }
 
 
-#define MENU_ITEMS_NUMBER 6
-#if MENU_ITEMS_NUMBER > 15
-error("Too much menu items!")
-#endif
-const char menu_items[MENU_ITEMS_NUMBER][80] = {
-        { "Frameskip %i  " },
-        { "Interlace mode %i  " },
-        { "FPS limit %i  " },
-        { "Show FPS %i  " },
-        { "Reset to ROM select" },
-        { "Return to game" },
+enum menu_type_e {
+    EMPTY,
+    INT,
+    TEXT,
+    ARRAY,
+
+    SAVE,
+    LOAD,
+    RESET,
+    RETURN,
 };
 
-bool reboot = false;
-bool frameskip = false;
-bool interlace = false;
-bool limit_fps = false;
-bool show_fps = true;
+typedef struct __attribute__((__packed__)) {
+    const char *text;
+    menu_type_e type;
+    const void *value;
+    uint8_t max_value;
+    char value_list[5][10];
+} MenuItem;
 
-void *menu_values[MENU_ITEMS_NUMBER] = {
-        &frameskip,
-        &interlace,
-        &limit_fps,
-        &show_fps,
-        nullptr,
-        nullptr,
+#define MENU_ITEMS_NUMBER 9
+const MenuItem menu_items[MENU_ITEMS_NUMBER] = {
+        {"Player 1: %s",        ARRAY, &player_1_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+        //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+        {""},
+        {"Interlace mode: %s",      ARRAY, &interlace,     1, {"NO ",       "YES"}},
+        {"Frameskip: %s",     ARRAY, &frameskip,  1, {"NO ",       "YES"}},
+        {"Limit fps: %s",     ARRAY, &limit_fps,    1, {"NO ",       "YES"}},
+        {"Show fps: %s",     ARRAY, &show_fps,    1, {"NO ",       "YES"}},
+        {""},
+        {"Reset to ROM select", RESET},
+        {"Return to game",      RETURN}
 };
+
 
 void menu() {
     bool exit = false;
@@ -386,59 +467,30 @@ void menu() {
     memset(&colors, 0x00, sizeof(colors));
     resolution = RESOLUTION_TEXTMODE;
 
+    char footer[80];
+    sprintf(footer, ":: %s %s build %s %s ::", PICO_PROGRAM_NAME, PICO_PROGRAM_VERSION_STRING, __DATE__, __TIME__);
+    draw_text(footer, (sizeof(footer) - strlen(footer)) >> 1, 0, 11, 1);
     int current_item = 0;
-    char item[80];
 
     while (!exit) {
+        ps2kbd.tick();
         nespad_read();
         sleep_ms(25);
         nespad_read();
 
-        if ((nespad_state & DPAD_DOWN) != 0) {
-            if (current_item < MENU_ITEMS_NUMBER - 1) {
+        if ((nespad_state & DPAD_DOWN || keyboard_bits.down) != 0) {
+            current_item = (current_item + 1) % MENU_ITEMS_NUMBER;
+            if (menu_items[current_item].type == EMPTY)
                 current_item++;
-            } else {
-                current_item = 0;
-            }
         }
 
-        if ((nespad_state & DPAD_UP) != 0) {
-            if (current_item > 0) {
+        if ((nespad_state & DPAD_UP || keyboard_bits.up) != 0) {
+            current_item = (current_item - 1 + MENU_ITEMS_NUMBER) % MENU_ITEMS_NUMBER;
+            if (menu_items[current_item].type == EMPTY)
                 current_item--;
-            } else {
-                current_item = MENU_ITEMS_NUMBER - 1;
-            }
-        }
-
-        if ((nespad_state & DPAD_LEFT) != 0 || (nespad_state & DPAD_RIGHT) != 0) {
-            switch (current_item) {
-                case 0:  // Frameskip
-                    frameskip = !frameskip;
-                    break;
-                case 1:  // Interlace
-                    interlace = !interlace;
-                    break;
-                case 2:  // limit fps
-                    limit_fps = !limit_fps;
-                    break;
-                case 3:  // show fps
-                    show_fps = !show_fps;
-                    break;
-            }
-        }
-
-        if ((nespad_state & DPAD_START) != 0 || (nespad_state & DPAD_A) != 0 || (nespad_state & DPAD_B) != 0) {
-            switch (current_item) {
-                case MENU_ITEMS_NUMBER - 2:
-                    reboot = true;
-                case MENU_ITEMS_NUMBER - 1:
-                    exit = true;
-                    break;
-            }
         }
 
         for (int i = 0; i < MENU_ITEMS_NUMBER; i++) {
-            // TODO: textmode maxy from define
             uint8_t y = i + ((15 - MENU_ITEMS_NUMBER) >> 1);
             uint8_t x = 30;
             uint8_t color = 0xFF;
@@ -447,12 +499,55 @@ void menu() {
                 color = 0x01;
                 bg_color = 0xFF;
             }
-            if (strstr(menu_items[i], "%s") != nullptr) {
-                sprintf(item, menu_items[i], menu_values[i]);
-            } else {
-                sprintf(item, menu_items[i], *(uint8_t *) menu_values[i]);
+
+            const MenuItem *item = &menu_items[i];
+
+            if (i == current_item) {
+                switch (item->type) {
+                    case INT:
+                    case ARRAY:
+                        if (item->max_value != 0) {
+                            auto *value = (uint8_t *) item->value;
+
+                            if ((nespad_state & DPAD_RIGHT || keyboard_bits.right) && *value < item->max_value) {
+                                (*value)++;
+                            }
+
+                            if ((nespad_state & DPAD_LEFT || keyboard_bits.left) && *value > 0) {
+                                (*value)--;
+                            }
+                        }
+                        break;
+                    case RETURN:
+                        if (nespad_state & DPAD_START || keyboard_bits.start)
+                            exit = true;
+                        break;
+                    case RESET:
+                        if (nespad_state & DPAD_START || keyboard_bits.start) {
+                            reboot = true;
+                            exit = true;
+                        }
+                        break;
+                }
+
             }
-            draw_text(item, x, y, color, bg_color);
+            static char result[80];
+
+            switch (item->type) {
+                case INT:
+                    sprintf(result, item->text, *(uint8_t *) item->value);
+                    break;
+                case ARRAY:
+                    sprintf(result, item->text, item->value_list[*(uint8_t *) item->value]);
+                    break;
+                case TEXT:
+                    sprintf(result, item->text, item->value);
+                    break;
+                default:
+                    sprintf(result, "%s", item->text);
+            }
+
+            draw_text(result, x, y, color, bg_color);
         }
 
         sleep_ms(100);
@@ -461,7 +556,66 @@ void menu() {
     resolution = old_resolution;
 }
 
+extern unsigned short button_state[3];
 
+void gwenesis_io_get_buttons() {
+    nespad_tick();
+    ps2kbd.tick();
+
+    input_bits_t player1_state = {};
+    input_bits_t player2_state = {};
+
+    switch (player_1_input) {
+        case 0:
+            player1_state = keyboard_bits;
+            break;
+        case 1:
+            player1_state = gamepad1_bits;
+            break;
+        case 2:
+            player1_state = gamepad2_bits;
+            break;
+    }
+
+    switch (player_2_input) {
+        case 0:
+            player2_state = keyboard_bits;
+            break;
+        case 1:
+            player2_state = gamepad1_bits;
+            break;
+        case 2:
+            player2_state = gamepad2_bits;
+            break;
+    }
+
+
+    button_state[0] = player1_state.left << PAD_LEFT |
+                      player1_state.right << PAD_RIGHT |
+                      player1_state.up << PAD_UP |
+                      player1_state.down << PAD_DOWN |
+                      player1_state.start << PAD_S |
+                      player1_state.a << PAD_A |
+                      player1_state.b << PAD_B |
+                      player1_state.c << PAD_C;
+
+    button_state[0] = ~button_state[0];
+
+/*    button_state[2] = player2_state.left << PAD_LEFT |
+                      player2_state.right << PAD_RIGHT |
+                      player2_state.up << PAD_UP |
+                      player2_state.down << PAD_DOWN |
+                      player2_state.start << PAD_S |
+                      player2_state.a << PAD_A |
+                      player2_state.b << PAD_B |
+                      player2_state.c << PAD_C;
+
+    button_state[2] = ~button_state[2];*/
+
+    if ((gamepad1_bits.start && gamepad1_bits.c) || (keyboard_bits.start && keyboard_bits.mode)) {
+        menu();
+    }
+}
 void emulate() {
     int hint_counter;
 
@@ -560,11 +714,6 @@ void emulate() {
 
         /* copy audio samples for DMA */
         //gwenesis_sound_submit();
-
-        if ((nespad_state & DPAD_SELECT) != 0 && (nespad_state & DPAD_START) != 0) {
-            menu();
-            continue;
-        }
     }
     reboot = false;
 }
@@ -593,6 +742,7 @@ int main() {
     vmode = Video(DEV_VGA, RES_HVGA);
     sleep_ms(50);
 
+    ps2kbd.init_gpio();
     nespad_begin(clock_get_hz(clk_sys) / 1000, NES_GPIO_CLK, NES_GPIO_DATA, NES_GPIO_LAT);
 
     sem_init(&vga_start_semaphore, 0, 1);

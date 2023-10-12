@@ -1076,7 +1076,7 @@ void gwenesis_vdp_render_line(int line)
     draw_sprites_over_planes(line);
     
 #if 1 //GNW_TARGET_MARIO != 0 | GNW_TARGET_ZELDA != 0
-  if (screen_width == 320) {
+  if (1) {
     /* Mode Highlight/shadow is enabled */
     if (MODE_SHI) {
       for (int x = 0; x < screen_width; x++) {
@@ -1166,7 +1166,7 @@ void gwenesis_vdp_render_line(int line)
 
   return;
 #else
-  uint16_t rgb565;
+  auint16_t rgb565;
   uint16_t tmp_line[320];
   uint16_t scaled_line[320];
 
