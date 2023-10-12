@@ -269,6 +269,17 @@ void gwenesis_io_get_buttons() {
                       ((nespad_state & DPAD_SELECT) != 0) << PAD_C;
 
     button_state[0] = ~button_state[0];
+
+    button_state[1] = ((nespad_state2 & DPAD_LEFT) != 0) << PAD_LEFT |
+                      ((nespad_state2 & DPAD_RIGHT) != 0) << PAD_RIGHT |
+                      ((nespad_state2 & DPAD_UP) != 0) << PAD_UP |
+                      ((nespad_state2 & DPAD_DOWN) != 0) << PAD_DOWN |
+                      ((nespad_state2 & DPAD_START) != 0) << PAD_S |
+                      ((nespad_state2 & DPAD_A) != 0) << PAD_A |
+                      ((nespad_state2 & DPAD_B) != 0) << PAD_B |
+                      ((nespad_state2 & DPAD_SELECT) != 0) << PAD_C;
+
+    button_state[1] = ~button_state[1];
 }
 
 unsigned int lines_per_frame = LINES_PER_FRAME_NTSC; //262; /* NTSC: 262, PAL: 313 */

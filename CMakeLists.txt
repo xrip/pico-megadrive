@@ -18,6 +18,7 @@ add_subdirectory(drivers/vga)
 add_subdirectory(drivers/sdcard)
 add_subdirectory(drivers/fatfs)
 add_subdirectory(drivers/nespad)
+add_subdirectory(drivers/ps2kbd)
 
 file(GLOB_RECURSE SRC "src/*.cpp" "src/*.c" "src/*.h")
 
@@ -49,12 +50,13 @@ pico_set_program_name(${PROJECT_NAME} "Genesis Emulator for MURMULATOR devboard"
 pico_set_program_version(${PROJECT_NAME} "v0.0.1")
 
 pico_enable_stdio_uart(${PROJECT_NAME} 0)
-pico_enable_stdio_usb(${PROJECT_NAME} 0)
+pico_enable_stdio_usb(${PROJECT_NAME} 1)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 		vga
 		nespad
 		sdcard
+		ps2kbd
 		fatfs
 
 		pico_runtime
