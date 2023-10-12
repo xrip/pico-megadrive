@@ -53,7 +53,7 @@ enum input_device {
 // SETTINGS
 bool show_fps = true;
 bool limit_fps = true;
-bool interlace = true;
+bool interlace = false;
 bool frameskip = true;
 
 
@@ -375,9 +375,10 @@ void __time_critical_func(render_loop)() {
     sem_acquire_blocking(&vga_start_semaphore);
     VgaInit(vmode, 640, 480);
 
-    uint32_t y;
+    uint32_t y, xoffset;
     while (linebuf = get_vga_line()) {
         y = linebuf->row;
+        xoffset = (screen_width == 320 ? 0 : 64);
 
         switch (resolution) {
             case RESOLUTION_TEXTMODE:
@@ -399,7 +400,7 @@ void __time_critical_func(render_loop)() {
             case RESOLUTION_NATIVE:
                 if (y < screen_height) {
                     for (uint_fast16_t x = 0; x < (screen_width << 1); x += 2) {
-                        (uint16_t &) linebuf->line[(screen_width == 320 ? 0 : 32) + x] = X2(SCREEN[y][x >> 1]);
+                        (uint16_t &) linebuf->line[xoffset + x] = X2(SCREEN[y][x >> 1]);
                     }
                 } else {
                     memset(linebuf->line, 0, 640);

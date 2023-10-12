@@ -318,7 +318,7 @@ void push_fifo(unsigned int value) {
  *   Write an value to VRAM on specified address
  *
  ******************************************************************************/
-//static inline __attribute__((always_inline))
+static inline __attribute__((always_inline))
 void gwenesis_vdp_vram_write(unsigned int address, unsigned int value) {
     VRAM[address] = value;
 
@@ -413,7 +413,8 @@ void gwenesis_vdp_dma_fill(unsigned short value) {
             break;
         case 0x3: // undocumented and buggy, see vdpfifotesting
             do {
-                CRAM[(address_reg & 0x7f) >> 1] = fifo[3];
+                uint8_t addr = (address_reg & 0x7f) >> 1;
+                CRAM[addr] = fifo[3];
 
                 uint8_t pixel = convertRGB565toRGB222(
                         (fifo[3] & 0xe00) >> 7 | (fifo[3] & 0x0e0) << 3 | (fifo[3] & 0x00e) << 12);
@@ -421,10 +422,10 @@ void gwenesis_vdp_dma_fill(unsigned short value) {
                 // pixel_highlight = pixel_shadow | 0x8410;
 
                 // Normal pixel values when SHI is not enabled
-                CRAM222[(address_reg & 0x7f) >> 1] = pixel;
-                CRAM222[0x40 + ((address_reg & 0x7f) >> 1)] = pixel;
-                CRAM222[0x80 + ((address_reg & 0x7f) >> 1)] = pixel;
-                CRAM222[0xC0 + ((address_reg & 0x7f) >> 1)] = pixel;
+                CRAM222[addr] = pixel;
+                CRAM222[0x40 + addr] = pixel;
+                CRAM222[0x80 + addr] = pixel;
+                CRAM222[0xC0 + addr] = pixel;
 
                 address_reg += REG15_DMA_INCREMENT;
                 src_addr_low++;
@@ -507,17 +508,18 @@ void gwenesis_vdp_dma_m68k() {
                 do {
                     value = FETCH16RAM(src_addr);
                     push_fifo(value);
-                    CRAM[(address_reg & 0x7f) >> 1] = value;
+                    uint8_t addr = (address_reg & 0x7f) >> 1;
+                    CRAM[addr] = value;
 
                     uint8_t pixel = convertRGB565toRGB222(
                             (value & 0xe00) >> 7 | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
 
                     // Normal pixel values when SHI is not enabled
                     // add mirror 0x80 when high priority flag is set
-                    CRAM222[(address_reg & 0x7f) >> 1] = pixel;
-                    CRAM222[0x40 + ((address_reg & 0x7f) >> 1)] = pixel;
-                    CRAM222[0x80 + ((address_reg & 0x7f) >> 1)] = pixel;
-                    CRAM222[0xC0 + ((address_reg & 0x7f) >> 1)] = pixel;
+                    CRAM222[addr] = pixel;
+                    CRAM222[0x40 + addr] = pixel;
+                    CRAM222[0x80 + addr] = pixel;
+                    CRAM222[0xC0 + addr] = pixel;
 
                     address_reg += REG15_DMA_INCREMENT;
                     src_addr += 2;
@@ -562,7 +564,8 @@ void gwenesis_vdp_dma_m68k() {
                 do {
                     value = FETCH16ROM(src_addr);
                     push_fifo(value);
-                    CRAM[(address_reg & 0x7f) >> 1] = value;
+                    uint8_t addr = (address_reg & 0x7f) >> 1;
+                    CRAM[addr] = value;
 
                     uint8_t pixel = convertRGB565toRGB222(
                             (value & 0xe00) >> 7 | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
@@ -572,10 +575,10 @@ void gwenesis_vdp_dma_m68k() {
 
                     // Normal pixel values when SHI is not enabled
                     // add mirror 0x80 when high priority flag is set
-                    CRAM222[(address_reg & 0x7f) >> 1] = pixel;
-                    CRAM222[0x40 + ((address_reg & 0x7f) >> 1)] = pixel;
-                    CRAM222[0x80 + ((address_reg & 0x7f) >> 1)] = pixel;
-                    CRAM222[0xC0 + ((address_reg & 0x7f) >> 1)] = pixel;
+                    CRAM222[addr] = pixel;
+                    CRAM222[0x40 + addr] = pixel;
+                    CRAM222[0x80 + addr] = pixel;
+                    CRAM222[0xC0 + addr] = pixel;
 
                     address_reg += REG15_DMA_INCREMENT;
                     src_addr += 2;
@@ -793,22 +796,25 @@ void gwenesis_vdp_write_data_port_16(unsigned int value) {
 
             break;
         case 0x3: /* CRAM write */
+        {
             //vdpm_log(__FUNCTION__,"CRAM write : addr:%x increment:%d value:%04x",
             // address_reg, REG15_DMA_INCREMENT, value);
-            CRAM[(address_reg & 0x7f) >> 1] = value;
+            uint8_t addr = (address_reg & 0x7f) >> 1;
+            CRAM[addr] = value;
 
             uint8_t pixel = convertRGB565toRGB222((value & 0xe00) >> 7 | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
 
             // Normal pixel values when SHI is not enabled
-            CRAM222[(address_reg & 0x7f) >> 1] = pixel;
-            CRAM222[0x40 + ((address_reg & 0x7f) >> 1)] = pixel;
-            CRAM222[0x80 + ((address_reg & 0x7f) >> 1)] = pixel;
-            CRAM222[0xC0 + ((address_reg & 0x7f) >> 1)] = pixel;
+            CRAM222[addr] = pixel;
+            CRAM222[0x40 + addr] = pixel;
+            CRAM222[0x80 + addr] = pixel;
+            CRAM222[0xC0 + addr] = pixel;
 
             address_reg += REG15_DMA_INCREMENT;
             address_reg &= 0xFFFF;
 
             break;
+        }
         case 0x5: /* VSRAM write */
             //vdpm_log(__FUNCTION__,"VSRAM write : addr:%x increment:%d value:%04x",
             //  address_reg, REG15_DMA_INCREMENT, value);

@@ -115,7 +115,7 @@ void gwenesis_vdp_set_buffers(unsigned char *screen_buffer, unsigned char *scale
 }
 */
 //embedded
-void gwenesis_vdp_set_buffer(uint8_t *ptr_screen_buffer)
+inline __attribute__((always_inline)) void gwenesis_vdp_set_buffer(uint8_t *ptr_screen_buffer)
 {
     screen_buffer_line = ptr_screen_buffer;
     //screen_buffer = ptr_screen_buffer;
@@ -915,7 +915,7 @@ void draw_sprites(int line)
  *
  ******************************************************************************/
 //static unsigned short current_line[320];
-
+inline __attribute__((always_inline))
 void gwenesis_vdp_render_config()
 {
     mode_h40 = REG12_MODE_H40;
