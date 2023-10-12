@@ -1,3 +1,7 @@
+# v0.0.2a
+
+Optimizations
+
 # v0.0.2
 
 - more games are playable. interlace and frameskip are on by default
