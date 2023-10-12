@@ -46,8 +46,8 @@ if(OVERCLOCKING)
 	message(STATUS "")
 endif ()
 
-pico_set_program_name(${PROJECT_NAME} "Genesis Emulator for MURMULATOR devboard")
-pico_set_program_version(${PROJECT_NAME} "v0.0.1")
+pico_set_program_name(genesis "Sega MegaDrive by xrip for MURMULATOR devboard")
+pico_set_program_version(genesis "development")
 
 pico_enable_stdio_uart(${PROJECT_NAME} 0)
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
