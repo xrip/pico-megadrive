@@ -26,6 +26,7 @@ __license__ = "GPLv3"
 #include "../io/gwenesis_io.h"
 #include "../bus/gwenesis_bus.h"
 #include "../savestate/gwenesis_savestate.h"
+#include "vga.h"
 
 #include <assert.h>
 
@@ -114,7 +115,9 @@ extern bool sprite_collision;
  *  Clear all volatile memory
  *
  ******************************************************************************/
+#define RGB565_TO_RGB888(rgb565) ((((rgb565) & 0xF800) << 8) | (((rgb565) & 0x07E0) << 5) | (((rgb565) & 0x001F) << 3))
 
+#define RGB888(r,g,b) ((r<<16) | (g << 8 ) | b )
 inline uint8_t convertRGB565toRGB222(uint16_t color565) {
     return ((((color565 >> 11) & 0x1F) * 255 / 31) >> 6) << 4 |
            ((((color565 >> 5) & 0x3F) * 255 / 63) >> 6) << 2 |
@@ -416,16 +419,11 @@ void gwenesis_vdp_dma_fill(unsigned short value) {
                 uint8_t addr = (address_reg & 0x7f) >> 1;
                 CRAM[addr] = fifo[3];
 
-                uint8_t pixel = convertRGB565toRGB222(
-                        (fifo[3] & 0xe00) >> 7 | (fifo[3] & 0x0e0) << 3 | (fifo[3] & 0x00e) << 12);
-                // pixel_shadow = pixel >> 1;
-                // pixel_highlight = pixel_shadow | 0x8410;
-
-                // Normal pixel values when SHI is not enabled
-                CRAM222[addr] = pixel;
-                CRAM222[0x40 + addr] = pixel;
-                CRAM222[0x80 + addr] = pixel;
-                CRAM222[0xC0 + addr] = pixel;
+                uint32_t pixel = RGB565_TO_RGB888((fifo[3] & 0xe00) >> 7  | (fifo[3] & 0x0e0) << 3 | (fifo[3] & 0x00e) << 12);
+                setVGA_color_palette(addr, pixel);
+                setVGA_color_palette(0x40 + addr, pixel);
+                setVGA_color_palette(0x80 + addr, pixel);
+                setVGA_color_palette(0xc0 + addr, pixel);
 
                 address_reg += REG15_DMA_INCREMENT;
                 src_addr_low++;
@@ -511,15 +509,17 @@ void gwenesis_vdp_dma_m68k() {
                     uint8_t addr = (address_reg & 0x7f) >> 1;
                     CRAM[addr] = value;
 
-                    uint8_t pixel = convertRGB565toRGB222(
-                            (value & 0xe00) >> 7 | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
-
+                    uint32_t pixel = RGB565_TO_RGB888((value & 0xe00) >> 7  | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
+                    setVGA_color_palette(addr, pixel);
+                    setVGA_color_palette(0x40 + addr, pixel);
+                    setVGA_color_palette(0x80 + addr, pixel);
+                    setVGA_color_palette(0xC0 + addr, pixel);
                     // Normal pixel values when SHI is not enabled
                     // add mirror 0x80 when high priority flag is set
-                    CRAM222[addr] = pixel;
-                    CRAM222[0x40 + addr] = pixel;
-                    CRAM222[0x80 + addr] = pixel;
-                    CRAM222[0xC0 + addr] = pixel;
+                    //CRAM222[addr] = pixel;
+                    //CRAM222[0x40 + addr] = pixel;
+                    //CRAM222[0x80 + addr] = pixel;
+                    //CRAM222[0xC0 + addr] = pixel;
 
                     address_reg += REG15_DMA_INCREMENT;
                     src_addr += 2;
@@ -567,18 +567,11 @@ void gwenesis_vdp_dma_m68k() {
                     uint8_t addr = (address_reg & 0x7f) >> 1;
                     CRAM[addr] = value;
 
-                    uint8_t pixel = convertRGB565toRGB222(
-                            (value & 0xe00) >> 7 | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
-
-                    //   pixel_shadow = pixel >> 1;
-                    //   pixel_highlight = pixel_shadow | 0x8410;
-
-                    // Normal pixel values when SHI is not enabled
-                    // add mirror 0x80 when high priority flag is set
-                    CRAM222[addr] = pixel;
-                    CRAM222[0x40 + addr] = pixel;
-                    CRAM222[0x80 + addr] = pixel;
-                    CRAM222[0xC0 + addr] = pixel;
+                    uint32_t pixel = RGB565_TO_RGB888((value & 0xe00) >> 7  | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
+                    setVGA_color_palette(addr, pixel);
+                    setVGA_color_palette(0x40 + addr, pixel);
+                    setVGA_color_palette(0x80 + addr, pixel);
+                    setVGA_color_palette(0xc0 + addr, pixel);
 
                     address_reg += REG15_DMA_INCREMENT;
                     src_addr += 2;
@@ -802,13 +795,11 @@ void gwenesis_vdp_write_data_port_16(unsigned int value) {
             uint8_t addr = (address_reg & 0x7f) >> 1;
             CRAM[addr] = value;
 
-            uint8_t pixel = convertRGB565toRGB222((value & 0xe00) >> 7 | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
-
-            // Normal pixel values when SHI is not enabled
-            CRAM222[addr] = pixel;
-            CRAM222[0x40 + addr] = pixel;
-            CRAM222[0x80 + addr] = pixel;
-            CRAM222[0xC0 + addr] = pixel;
+            uint32_t pixel = RGB565_TO_RGB888((value & 0xe00) >> 7  | (value & 0x0e0) << 3 | (value & 0x00e) << 12);
+            setVGA_color_palette(addr, pixel);
+            setVGA_color_palette(0x40 + addr, pixel);
+            setVGA_color_palette(0x80 + addr, pixel);
+            setVGA_color_palette(0xc0 + addr, pixel);
 
             address_reg += REG15_DMA_INCREMENT;
             address_reg &= 0xFFFF;

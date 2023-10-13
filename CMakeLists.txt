@@ -14,7 +14,7 @@ project(genesis C CXX ASM)
 
 pico_sdk_init()
 
-add_subdirectory(drivers/vga)
+add_subdirectory(drivers/vga-nextgen)
 add_subdirectory(drivers/sdcard)
 add_subdirectory(drivers/fatfs)
 add_subdirectory(drivers/nespad)
@@ -53,7 +53,7 @@ pico_enable_stdio_uart(${PROJECT_NAME} 0)
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
-		vga
+		vga-nextgen
 		nespad
 		sdcard
 		ps2kbd

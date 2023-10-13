@@ -1032,7 +1032,7 @@ void gwenesis_vdp_render_line(int line)
   // Display is not enabled. fill with background colour
   if (REG1_DISP_ENABLED == 0) {
     for (int px=0; px < 320;px++) 
-      screen_buffer_line[px]= CRAM222[0];
+      screen_buffer_line[px]= 0;
     return;
   }
   #else
@@ -1087,19 +1087,19 @@ void gwenesis_vdp_render_line(int line)
           switch (sprite & 0x3F) {
           // Palette=3, Sprite=14 :> draw plane, force highlight
           case 0x3E:
-            screen_buffer_line[x] = 0x8410 | CRAM222[plane] >> 1;
+            screen_buffer_line[x] = 0x8410 | plane >> 1;
             break;
           // Palette=3, Sprite=15 :> draw plane, force shadow
           case 0x3F:
-            screen_buffer_line[x] = CRAM222[plane] >> 1;
+            screen_buffer_line[x] = plane >> 1;
             break;
           // draw sprite, normal
           default:
-            screen_buffer_line[x] = CRAM222[sprite];
+            screen_buffer_line[x] = sprite;
             break;
           }
         } else {
-          screen_buffer_line[x] = CRAM222[plane];
+          screen_buffer_line[x] = plane;
         }
       }
 
@@ -1111,7 +1111,7 @@ void gwenesis_vdp_render_line(int line)
       for (int x = 0; x < screen_width; x+=4) {
       //   screen_buffer_line[x] = CRAM565[pb[x]];
         //  2 pixels : 32 bits write  access is faster
-        *video_out++ = CRAM222[pb[x]] | CRAM222[pb[x + 1]] << 8 | CRAM222[pb[x + 2]] << 16 | CRAM222[pb[x + 3]] << 24;
+        *video_out++ = pb[x] | pb[x + 1] << 8 | pb[x + 2] << 16 | pb[x + 3] << 24;
       }
     }
     /* upscale mode H32 to H40 */
