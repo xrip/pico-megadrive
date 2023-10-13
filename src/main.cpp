@@ -48,8 +48,8 @@ enum input_device {
 // SETTINGS
 bool show_fps = true;
 bool limit_fps = true;
-bool interlace = false;
-bool frameskip = true;
+bool interlace = (OVERCLOCKING < 366);
+bool frameskip = (OVERCLOCKING < 400);
 bool flash_line = true;
 bool flash_frame = true;
 uint8_t player_1_input = GAMEPAD1;
@@ -501,9 +501,7 @@ void menu() {
         sleep_ms(100);
     }
 
-    memset(SCREEN, 0, sizeof SCREEN);
     setVGA_color_flash_mode(flash_line, flash_frame);
-    //updatePalette(palette);
     setVGAmode(VGA640x480div2);
 }
 
@@ -581,6 +579,17 @@ void __time_critical_func(render_core)() {
 
     sem_acquire_blocking(&vga_start_semaphore);
 }
+char fps_text[3] = "99";
+extern uint8_t fnt8x16[];
+void __inline draw_fps(const char fps[3],uint8_t y, uint8_t color) {
+    for (uint8_t x = 0; x < 3; x++) {
+        uint8_t glyph_col = fnt8x16[(fps[x] << 4) + y];
+
+        for (uint8_t bit = 0; bit < 8; bit++)
+            if ((glyph_col >> bit) & 1)
+                SCREEN[y][( 8*2)+8 * x + bit] = color;
+    }
+}
 
 void emulate() {
     int hint_counter;
@@ -592,7 +601,7 @@ void emulate() {
         screen_height = REG1_PAL ? 240 : 224;
         screen_width = REG12_MODE_H40 ? 320 : 256;
         lines_per_frame = REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC;
-
+        setVGAbuf_pos(screen_width != 320 ? 32 : 0, screen_height != 240 ? 8 : 0);
         gwenesis_vdp_render_config();
 
         /* Reset the difference clocks and audio index */
@@ -606,6 +615,8 @@ void emulate() {
 
             /* Video */
             if (drawFrame) {
+/*                if (show_fps && scan_line < 16)
+                    draw_fps(fps_text, scan_line, 1);*/
                 // Interlace mode
                 if (!interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
                     gwenesis_vdp_set_buffer(&SCREEN[scan_line][0]);
@@ -647,7 +658,7 @@ void emulate() {
                     drawFrame = 1;
                 }
 
-                if (show_fps && frame == 60) {
+/*                if (show_fps && frame >= 60) {
                     uint64_t end_time;
                     uint32_t diff;
                     uint8_t fps;
@@ -657,6 +668,19 @@ void emulate() {
                     char fps_text[3];
                     sprintf(fps_text, "%i ", fps);
                     draw_text(fps_text, 77, 0, 0xFF, 0x00);
+                    frame = 0;
+                    start_time = time_us_64();
+                }*/
+                if (show_fps && frame >= 60) {
+                    uint64_t end_time;
+                    uint32_t diff;
+                    uint8_t fps;
+                    end_time = time_us_64();
+                    diff = end_time - start_time;
+                    fps = ((uint64_t) frame * 1000 * 1000) / diff;
+
+                    sprintf(fps_text, "%i", fps);
+                    //draw_text(fps_text, 77, 0, 0xFF, 0x00);
                     frame = 0;
                     start_time = time_us_64();
                 }
@@ -711,10 +735,11 @@ int main() {
     multicore_launch_core1(render_core);
     sem_release(&vga_start_semaphore);
 
-    sleep_ms(50);
+
 
 
     while (true) {
+        sleep_ms(50);
         setVGAmode(VGA640x480_text_80_30);
         fileselector();
         memset(SCREEN, 0, sizeof(SCREEN));
