@@ -66,7 +66,7 @@ unsigned short CRAM[CRAM_MAX_SIZE];           // CRAM - Palettes
 unsigned char SAT_CACHE[SAT_CACHE_MAX_SIZE];  // Sprite cache
 unsigned char gwenesis_vdp_regs[REG_SIZE];    // Registers
 unsigned short fifo[FIFO_SIZE];               // Fifo
-uint8_t CRAM222[CRAM_MAX_SIZE * 4];    // CRAM - Palettes
+//uint8_t CRAM222[CRAM_MAX_SIZE * 4];    // CRAM - Palettes
 unsigned short VSRAM[VSRAM_MAX_SIZE];         // VSRAM - Scrolling
 
 // Define VDP control code and set initial code
@@ -152,7 +152,7 @@ void gwenesis_vdp_reset() {
     memset(VRAM, 0, VRAM_MAX_SIZE);
     memset(SAT_CACHE, 0, sizeof(SAT_CACHE));
     memset(CRAM, 0, sizeof(CRAM));
-    memset(CRAM222, 0, sizeof(CRAM222));
+//    memset(CRAM222, 0, sizeof(CRAM222));
     memset(VSRAM, 0, sizeof(VSRAM));
     memset(gwenesis_vdp_regs, 0, sizeof(gwenesis_vdp_regs));
     command_word_pending = 0;
@@ -514,12 +514,6 @@ void gwenesis_vdp_dma_m68k() {
                     setVGA_color_palette(0x40 + addr, pixel);
                     setVGA_color_palette(0x80 + addr, pixel);
                     setVGA_color_palette(0xC0 + addr, pixel);
-                    // Normal pixel values when SHI is not enabled
-                    // add mirror 0x80 when high priority flag is set
-                    //CRAM222[addr] = pixel;
-                    //CRAM222[0x40 + addr] = pixel;
-                    //CRAM222[0x80 + addr] = pixel;
-                    //CRAM222[0xC0 + addr] = pixel;
 
                     address_reg += REG15_DMA_INCREMENT;
                     src_addr += 2;
@@ -936,7 +930,7 @@ void gwenesis_vdp_mem_save_state() {
     saveGwenesisStateSetBuffer(state, "SAT_CACHE", SAT_CACHE, sizeof(SAT_CACHE));
     saveGwenesisStateSetBuffer(state, "gwenesis_vdp_regs", gwenesis_vdp_regs, sizeof(gwenesis_vdp_regs));
     saveGwenesisStateSetBuffer(state, "fifo", fifo, sizeof(fifo));
-    saveGwenesisStateSetBuffer(state, "CRAM565", CRAM222, sizeof(CRAM222));
+//    saveGwenesisStateSetBuffer(state, "CRAM565", CRAM222, sizeof(CRAM222));
     saveGwenesisStateSetBuffer(state, "VSRAM", VSRAM, sizeof(VSRAM));
     saveGwenesisStateSet(state, "code_reg", code_reg);
     saveGwenesisStateSet(state, "address_reg", address_reg);
@@ -956,7 +950,7 @@ void gwenesis_vdp_mem_load_state() {
     saveGwenesisStateGetBuffer(state, "SAT_CACHE", SAT_CACHE, sizeof(SAT_CACHE));
     saveGwenesisStateGetBuffer(state, "gwenesis_vdp_regs", gwenesis_vdp_regs, sizeof(gwenesis_vdp_regs));
     saveGwenesisStateGetBuffer(state, "fifo", fifo, sizeof(fifo));
-    saveGwenesisStateGetBuffer(state, "CRAM565", CRAM222, sizeof(CRAM222));
+//    saveGwenesisStateGetBuffer(state, "CRAM565", CRAM222, sizeof(CRAM222));
     saveGwenesisStateGetBuffer(state, "VSRAM", VSRAM, sizeof(VSRAM));
     code_reg = saveGwenesisStateGet(state, "code_reg");
     address_reg = saveGwenesisStateGet(state, "address_reg");
