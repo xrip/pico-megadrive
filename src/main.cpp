@@ -356,10 +356,6 @@ extern unsigned int gwenesis_vdp_status;
 extern unsigned int screen_width, screen_height;
 extern int hint_pending;
 
-#define X2(a) (a | (a << 8))
-#define CHECK_BIT(var, pos) (((var)>>(pos)) & 1)
-
-
 enum menu_type_e {
     EMPTY,
     INT,
@@ -579,7 +575,7 @@ void __time_critical_func(render_core)() {
 
     sem_acquire_blocking(&vga_start_semaphore);
 }
-char fps_text[3] = "99";
+char fps_text[3] = "00";
 extern uint8_t fnt8x16[];
 void __inline draw_fps(const char fps[3],uint8_t y, uint8_t color) {
     for (uint8_t x = 0; x < 3; x++) {
@@ -587,7 +583,7 @@ void __inline draw_fps(const char fps[3],uint8_t y, uint8_t color) {
 
         for (uint8_t bit = 0; bit < 8; bit++)
             if ((glyph_col >> bit) & 1)
-                SCREEN[y][( 8*2)+8 * x + bit] = color;
+                SCREEN[y][8 * x + bit] = color;
     }
 }
 
@@ -615,13 +611,14 @@ void emulate() {
 
             /* Video */
             if (drawFrame) {
-/*                if (show_fps && scan_line < 16)
-                    draw_fps(fps_text, scan_line, 1);*/
                 // Interlace mode
                 if (!interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
                     gwenesis_vdp_set_buffer(&SCREEN[scan_line][0]);
                     gwenesis_vdp_render_line(scan_line); /* render scan_line */
                 }
+                if (show_fps && scan_line < 16)
+                    draw_fps(fps_text, scan_line, 255);
+
             }
 
             // On these lines, the line counter interrupt is reloaded
@@ -658,19 +655,6 @@ void emulate() {
                     drawFrame = 1;
                 }
 
-/*                if (show_fps && frame >= 60) {
-                    uint64_t end_time;
-                    uint32_t diff;
-                    uint8_t fps;
-                    end_time = time_us_64();
-                    diff = end_time - start_time;
-                    fps = ((uint64_t) frame * 1000 * 1000) / diff;
-                    char fps_text[3];
-                    sprintf(fps_text, "%i ", fps);
-                    draw_text(fps_text, 77, 0, 0xFF, 0x00);
-                    frame = 0;
-                    start_time = time_us_64();
-                }*/
                 if (show_fps && frame >= 60) {
                     uint64_t end_time;
                     uint32_t diff;
@@ -734,9 +718,6 @@ int main() {
     sem_init(&vga_start_semaphore, 0, 1);
     multicore_launch_core1(render_core);
     sem_release(&vga_start_semaphore);
-
-
-
 
     while (true) {
         sleep_ms(50);
