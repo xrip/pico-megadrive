@@ -1106,13 +1106,16 @@ void gwenesis_vdp_render_line(int line)
       /* Normal mode*/
     } else {
 
-      uint32_t *video_out = (uint8_t *)&screen_buffer_line[0];
+        memcpy(screen_buffer_line, pb, 320);
+      /*
+        uint32_t *video_out = (uint8_t *)&screen_buffer_line[0];
 
       for (int x = 0; x < screen_width; x+=4) {
       //   screen_buffer_line[x] = CRAM565[pb[x]];
         //  2 pixels : 32 bits write  access is faster
         *video_out++ = pb[x] | pb[x + 1] << 8 | pb[x + 2] << 16 | pb[x + 3] << 24;
       }
+       */
     }
     /* upscale mode H32 to H40 */
   } /*else {
