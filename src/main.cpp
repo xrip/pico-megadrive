@@ -577,9 +577,9 @@ void __time_critical_func(render_core)() {
 }
 char fps_text[3] = "00";
 extern uint8_t fnt8x16[];
-void __inline draw_fps(const char fps[3],uint8_t y, uint8_t color) {
+void __inline draw_fps(uint8_t y, uint8_t color) {
     for (uint8_t x = 0; x < 3; x++) {
-        uint8_t glyph_col = fnt8x16[(fps[x] << 4) + y];
+        uint8_t glyph_col = fnt8x16[(fps_text[x] << 4) + y];
 
         for (uint8_t bit = 0; bit < 8; bit++)
             if ((glyph_col >> bit) & 1)
