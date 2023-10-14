@@ -617,7 +617,7 @@ void emulate() {
                     gwenesis_vdp_render_line(scan_line); /* render scan_line */
                 }
                 if (show_fps && scan_line < 16)
-                    draw_fps(fps_text, scan_line, 255);
+                    draw_fps(scan_line, 255);
 
             }
 
