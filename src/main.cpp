@@ -653,7 +653,7 @@ void gwenesis_io_get_buttons() {
         menu();
     }
 }
-
+char fps_text[5] = "000";
 /* Renderer loop on Pico's second core */
 void __time_critical_func(render_core)() {
     ps2kbd.init_gpio();
@@ -671,7 +671,7 @@ void __time_critical_func(render_core)() {
 
     sem_acquire_blocking(&vga_start_semaphore);
 }
-char fps_text[5] = "000";
+
 extern uint8_t fnt8x16[];
 void draw_fps(uint8_t y, uint8_t color) {
     for (uint8_t x = 0; x < 3; x++) {

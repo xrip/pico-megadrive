@@ -47,7 +47,7 @@ if(OVERCLOCKING)
 endif ()
 
 pico_set_program_name(genesis "Sega MegaDrive by xrip for MURMULATOR devboard")
-pico_set_program_version(genesis "development")
+pico_set_program_version(genesis "develop")
 
 pico_enable_stdio_uart(${PROJECT_NAME} 0)
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
