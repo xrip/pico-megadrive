@@ -493,7 +493,7 @@ void menu() {
 
     char footer[80];
     sprintf(footer, ":: %s %s build %s %s ::", PICO_PROGRAM_NAME, PICO_PROGRAM_VERSION_STRING, __DATE__, __TIME__);
-    draw_text(footer, (sizeof(footer) - strlen(footer)) >> 1, 0, 11, 1);
+    draw_text(footer, (80 - strlen(footer)) >> 1, 0, 11, 1);
     int current_item = 0;
 
     while (!exit) {
@@ -712,8 +712,8 @@ void emulate() {
                     gwenesis_vdp_set_buffer(&SCREEN[scan_line][0]);
                     gwenesis_vdp_render_line(scan_line); /* render scan_line */
                 }
-                if (show_fps && scan_line < 16) {
-                     draw_fps(scan_line, 255);
+                if (show_fps && scan_line > 16  && scan_line < 32) {
+                     draw_fps(scan_line-16, 255);
                     //printf("%s", fps_text);
                 }
 
