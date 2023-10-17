@@ -176,7 +176,7 @@ void gwenesis_vdp_reset() {
  *
  ******************************************************************************/
 //static inline __attribute__((always_inline))
-int gwenesis_vdp_hcounter() {
+int __always_inline gwenesis_vdp_hcounter() {
     int mclk = m68k_cycles_run();
     int pixclk;
 

@@ -587,7 +587,7 @@ void setVGA_color_palette(uint8_t i_color, uint32_t color888)
 void initVGA()
 {
      //инициализация палитры по умолчанию
-#if 1
+#if 0
     uint8_t conv0[]={0b00,0b00,0b01,0b10,0b10,0b10,0b11,0b11};
     uint8_t conv1[]={0b00,0b01,0b01,0b01,0b10,0b11,0b11,0b11};
     for(int i=0;i<256;i++)

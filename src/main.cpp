@@ -3,6 +3,7 @@
 /* Standard library includes */
 
 #include <pico/stdlib.h>
+#include <pico/runtime.h>
 #include <hardware/clocks.h>
 #include <pico/multicore.h>
 #include "hardware/vreg.h"
@@ -31,7 +32,7 @@ extern "C" {
 #ifndef OVERCLOCKING
 #define OVERCLOCKING 270
 #endif
-
+#define HOME_DIR "\\SEGA"
 #define FLASH_TARGET_OFFSET (900 * 1024)
 static constexpr uintptr_t rom = (XIP_BASE + FLASH_TARGET_OFFSET);
 char rom_filename[1] = { 0 };
@@ -142,10 +143,8 @@ int frame, frame_cnt = 0;
 int frame_timer_start = 0;
 
 
-/**
- * Load a .gb rom file in flash from the SD card
- */
-void load_cart_rom_file(char *filename) {
+
+void filebrowser_loadfile(char *filename) {
     FIL fil;
     FRESULT fr;
 
@@ -193,151 +192,244 @@ void load_cart_rom_file(char *filename) {
     }
 }
 
-uint16_t fileselector_display_page(char filenames[60][256], uint16_t page_number) {
-    clrScr(0);
-    char footer[80];
-    const int files_in_page = 29;
-    sprintf(footer, "=================== PAGE #%i -> NEXT PAGE / <- PREV. PAGE ====================", page_number);
-    draw_text(footer, 0, files_in_page, 1, 11);
+typedef struct __attribute__((__packed__)) {
+    bool is_directory;
+    bool is_executable;
+    size_t size;
+    char filename[80];
+} FileItem;
 
-    DIR directory;
-    FILINFO file;
-    FRESULT result = f_mount(&fs, "", 1);
-    if (FR_OK != result) {
-        printf("E f_mount error: %s (%d)\n", FRESULT_str(result), result);
-        return 0;
-    }
+int compareFileItems(const void *a, const void *b) {
+    auto *itemA = (FileItem *) a;
+    auto *itemB = (FileItem *) b;
 
-    /* clear the filenames array */
-    for (uint8_t ifile = 0; ifile < 28; ifile++) {
-        memset(&filenames[ifile][0], 0, 256);
-    }
+    // Directories come first
+    if (itemA->is_directory && !itemB->is_directory)
+        return -1;
+    if (!itemA->is_directory && itemB->is_directory)
+        return 1;
 
-    uint16_t total_files = 0;
-    result = f_findfirst(&directory, &file, "SEGA\\", "*.*");
-
-    /* skip the first N pages */
-    if (page_number > 0) {
-        while (total_files < page_number * files_in_page && result == FR_OK && file.fname[0]) {
-            total_files++;
-            result = f_findnext(&directory, &file);
-        }
-    }
-
-    /* store the filenames of this page */
-    total_files = 0;
-    while (total_files < files_in_page && result == FR_OK && file.fname[0]) {
-        strcpy(filenames[total_files], file.fname);
-        total_files++;
-        result = f_findnext(&directory, &file);
-    }
-    f_closedir(&directory);
-
-    for (uint8_t ifile = 0; ifile < total_files; ifile++) {
-        char pathname[255];
-        uint8_t color = 0x0b;
-        sprintf(pathname, "NES\\%s", filenames[ifile]);
-
-        if (strcmp(pathname, rom_filename) != 0) {
-            color = 0x0F;
-        }
-        draw_text(filenames[ifile], 0, ifile, color, 0);
-    }
-    return total_files;
+    // Sort files alphabetically
+    return strcmp(itemA->filename, itemB->filename);
 }
 
-void fileselector() {
-    uint16_t page_number = 0;
-    char filenames[60][256];
+void __inline draw_window(char *title, int x, int y, int width, int height) {
+    char textline[80];
 
-    printf("Selecting ROM\r\n");
+    width--;
+    height--;
+    // Рисуем рамки
+    // ═══
+    memset(textline, 0xCD, width);
+    // ╔ ╗ 188 ╝ 200 ╚
+    textline[0] = 0xC9;
+    textline[width] = 0xBB;
+    draw_text(textline, x, y, 11, 1);
+    draw_text(title, (80 - strlen(title)) >> 1, 0, 0, 3);
 
-    /* display the first page with up to 22 rom files */
-    uint16_t total_files = fileselector_display_page(filenames, page_number);
+    textline[0] = 0xC8;
+    textline[width] = 0xBC;
+    draw_text(textline, x, height - y, 11, 1);
 
-    /* select the first rom */
-    uint8_t current_file = 0;
 
-    uint8_t color = 0x0b;
-    draw_text(filenames[current_file], 0, current_file, color, 1);
+    memset(textline, ' ', width);
+    textline[0] = textline[width] = 0xBA;
+    for (int i = 1; i < height; i++) {
+        draw_text(textline, x, i, 11, 1);
+    }
+}
 
-    while (true) {
-        char pathname[255];
-        sprintf(pathname, "SEGA\\%s", filenames[current_file]);
+void filebrowser(char *path, char *executable) {
+    setVGAmode(VGA640x480_text_80_30);
+    bool debounce = true;
+    clrScr(1);
+    char basepath[255];
+    char tmp[80];
+    strcpy(basepath, path);
 
-        if (strcmp(pathname, rom_filename) != 0) {
-            color = 0x0f;
-        } else {
-            color = 0x0b;
+    constexpr int per_page = 27;
+    auto *fileItems = reinterpret_cast<FileItem *>(&SCREEN[0][0] + (1024 * 6));
+    constexpr int maxfiles = (sizeof(SCREEN) - (1024 * 6)) / sizeof(FileItem);
+
+
+    DIR dir;
+    FILINFO fileInfo;
+    FRESULT result = f_mount(&fs, "", 1);
+
+    if (FR_OK != result) {
+        printf("f_mount error: %s (%d)\r\n", FRESULT_str(result), result);
+        draw_text("SD Card mount error. Halt.", 0, 1, 4, 1);
+        while (1) {}
+    }
+
+    while (1) {
+        int total_files = 0;
+        memset(fileItems, 0, maxfiles * sizeof(FileItem));
+
+        sprintf(tmp, " SDCARD:\\%s ", basepath);
+        draw_window(tmp, 0, 0, 80, 29);
+
+        memset(tmp, ' ', 80);
+        draw_text(tmp, 0, 29, 0, 0);
+        draw_text("START", 0, 29, 7, 0);
+        draw_text(" Run at cursor ", 5, 29, 0, 3);
+
+        draw_text("SELECT", 5 + 15 + 1, 29, 7, 0);
+        draw_text(" Run previous  ", 5 + 15 + 1 + 6, 29, 0, 3);
+
+        draw_text("ARROWS", 5 + 15 + 1 + 6 + 15 + 1, 29, 7, 0);
+        draw_text(" Navigation    ", 5 + 15 + 1 + 6 + 15 + 1 + 6, 29, 0, 3);
+
+
+        // Open the directory
+        if (f_opendir(&dir, basepath) != FR_OK) {
+            draw_text("Failed to open directory", 0, 1, 4, 0);
+            while (1) {}
         }
-#if USE_PS2_KBD
-        ps2kbd.tick();
-#endif
 
-#if USE_NESPAD
-        nespad_tick();
-#endif
-        sleep_ms(33);
-#if USE_NESPAD
-        nespad_tick();
-#endif
-//-----------------------------------------------------------------------------
-
-//-----------------------------------------------------------------------------
-        if (keyboard_bits.c || gamepad1_bits.c) {
-            gpio_put(PICO_DEFAULT_LED_PIN, true);
-            break;
+        if (strlen(basepath) > 0) {
+            strcpy(fileItems[total_files].filename, "..\0");
+            fileItems[total_files].is_directory = true;
+            fileItems[total_files].size = 0;
+            total_files++;
         }
 
-        if (keyboard_bits.start || gamepad1_bits.start || gamepad1_bits.a || gamepad1_bits.b) {
-            /* copy the rom from the SD card to flash and start the game */
-            load_cart_rom_file(pathname);
-            break;
-        }
-        if (keyboard_bits.down || gamepad1_bits.down) {
-            /* select the next rom */
-            draw_text(filenames[current_file], 0, current_file, color, 0x0);
-            current_file++;
-            if (current_file >= total_files)
-                current_file = 0;
-            draw_text(filenames[current_file], 0, current_file, color, 0x1);
-            sleep_ms(150);
-        }
-        if (keyboard_bits.up || gamepad1_bits.up) {
-            /* select the previous rom */
-            draw_text(filenames[current_file], 0, current_file, color, 0x00);
-            if (current_file == 0) {
-                current_file = total_files - 1;
-            } else {
-                current_file--;
+        // Read all entries from the directory
+        while (f_readdir(&dir, &fileInfo) == FR_OK && fileInfo.fname[0] != '\0' && total_files < maxfiles) {
+            // Set the file item properties
+            fileItems[total_files].is_directory = fileInfo.fattrib & AM_DIR;
+            fileItems[total_files].size = fileInfo.fsize;
+
+            // Extract the extension from the file name
+            char *extension = strrchr(fileInfo.fname, '.');
+
+            if (extension != nullptr) {
+                char * token = strtok(executable, "|");
+                while (token != NULL) {
+                    if (memcmp(extension+1, token, 3) == 0) {
+                        fileItems[total_files].is_executable = true;
+                    }
+                    token = strtok(NULL, "|");
+                }
             }
-            draw_text(filenames[current_file], 0, current_file, color, 0x1);
-            sleep_ms(150);
+
+            strncpy(fileItems[total_files].filename, fileInfo.fname, 80);
+
+            total_files++;
         }
-        if (keyboard_bits.right || gamepad1_bits.right) {
-            /* select the next page */
-            page_number++;
-            total_files = fileselector_display_page(filenames, page_number);
-            if (total_files == 0) {
-                /* no files in this page, go to the previous page */
-                page_number--;
-                total_files = fileselector_display_page(filenames, page_number);
+        qsort(fileItems, total_files, sizeof(FileItem), compareFileItems);
+        // Cleanup
+        f_closedir(&dir);
+
+        if (total_files > 500) {
+            draw_text(" files > 500!!! ", 80 - 17, 0, 12, 3);
+        }
+
+        uint8_t color, bg_color;
+        uint32_t offset = 0;
+        uint32_t current_item = 0;
+
+        while (1) {
+            ps2kbd.tick();
+            nespad_tick();
+            sleep_ms(25);
+            nespad_tick();
+
+            if (!debounce) {
+                debounce = !(keyboard_bits.start || gamepad1_bits.start);
             }
-            /* select the first file */
-            current_file = 0;
-            draw_text(filenames[current_file], 0, current_file, color, 1);
-            sleep_ms(150);
+
+            if (keyboard_bits.c || gamepad1_bits.c) {
+                gpio_put(PICO_DEFAULT_LED_PIN, true);
+                return;
+            }
+            if (keyboard_bits.down || gamepad1_bits.down) {
+                if ((offset + (current_item + 1) < total_files)) {
+                    if ((current_item + 1) < per_page) {
+                        current_item++;
+                    } else {
+                        offset++;
+                    }
+                }
+            }
+
+            if (keyboard_bits.up || gamepad1_bits.up) {
+                if (current_item > 0) {
+                    current_item--;
+                } else if (offset > 0) {
+                    offset--;
+                }
+            }
+
+            if (keyboard_bits.right || gamepad1_bits.right) {
+                offset += per_page;
+                if (offset + (current_item + 1) > total_files) {
+                    offset = total_files - (current_item + 1);
+
+                }
+            }
+
+            if (keyboard_bits.left || gamepad1_bits.left) {
+                if (offset > per_page) {
+                    offset -= per_page;
+                } else {
+                    offset = 0;
+                    current_item = 0;
+                }
+            }
+
+            if (debounce && (keyboard_bits.start || gamepad1_bits.start)) {
+                auto file_at_cursor = fileItems[offset + current_item];
+
+                if (file_at_cursor.is_directory) {
+                    if (strcmp(file_at_cursor.filename, "..") == 0) {
+                        char *lastBackslash = strrchr(basepath, '\\');
+                        if (lastBackslash != nullptr) {
+                            size_t length = lastBackslash - basepath;
+                            basepath[length] = '\0';
+                        }
+                    } else {
+                        sprintf(basepath, "%s\\%s", basepath, file_at_cursor.filename);
+                    }
+                    debounce = false;
+                    break;
+                }
+
+                if (file_at_cursor.is_executable) {
+                    sprintf(tmp, "%s\\%s", basepath, file_at_cursor.filename);
+                    return filebrowser_loadfile(tmp);
+                }
+            }
+
+            for (int i = 0; i < per_page; i++) {
+                auto item = fileItems[offset + i];
+                color = 11;
+                bg_color = 1;
+                if (i == current_item) {
+                    color = 0;
+                    bg_color = 3;
+
+                    memset(tmp, 0xCD, 78);
+                    tmp[78] = '\0';
+                    draw_text(tmp, 1, per_page + 1, 11, 1);
+                    sprintf(tmp, " Size: %iKb, File %lu of %i ", item.size / 1024, offset + i + 1, total_files);
+                    draw_text(tmp, (80 - strlen(tmp)) >> 1, per_page + 1, 14, 3);
+                }
+                auto len = strlen(item.filename);
+                color = item.is_directory ? 15 : color;
+                color = item.is_executable ? 10 : color;
+                color = strstr(rom_filename, item.filename) != nullptr ? 13 : color;
+
+                memset(tmp, ' ', 78);
+                tmp[78] = '\0';
+
+                memcpy(&tmp, item.filename, len < 78 ? len : 78);
+
+                draw_text(tmp, 1, i + 1, color, bg_color);
+            }
+
+            sleep_ms(100);
         }
-        if ((keyboard_bits.left || gamepad1_bits.left) && page_number > 0) {
-            /* select the previous page */
-            page_number--;
-            total_files = fileselector_display_page(filenames, page_number);
-            /* select the first file */
-            current_file = 0;
-            draw_text(filenames[current_file], 0, current_file, color, 1);
-            sleep_ms(150);
-        }
-        tight_loop_contents();
     }
 }
 
@@ -621,10 +713,9 @@ void emulate() {
                     gwenesis_vdp_render_line(scan_line); /* render scan_line */
                 }
                 if (show_fps && scan_line < 16) {
-                     //draw_fps(scan_line, 255);
+                     draw_fps(scan_line, 255);
                     //printf("%s", fps_text);
                 }
-
 
             }
 
@@ -670,7 +761,7 @@ void emulate() {
                     diff = end_time - start_time;
                     fps = ((uint64_t) frame * 1000 * 1000) / diff;
 
-                    //sprintf(fps_text, "%i", fps);
+                    sprintf(fps_text, "%i", fps);
                     //draw_text(fps_text, 77, 0, 0xFF, 0x00);
                     frame = 0;
                     start_time = time_us_64();
@@ -726,7 +817,7 @@ int main() {
     while (true) {
         sleep_ms(50);
         setVGAmode(VGA640x480_text_80_30);
-        fileselector();
+        filebrowser(HOME_DIR, "gen|md\0");
         memset(SCREEN, 0, sizeof(SCREEN));
         setVGAmode(VGA640x480div2);
 

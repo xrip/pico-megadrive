@@ -2,7 +2,7 @@
 /*                            MAIN 68K CORE                                 */
 /* ======================================================================== */
 #pragma GCC optimize("Ofast")
-
+#include "pico.h"
 extern int vdp_68k_irq_ack(int int_level);
 
 #define m68ki_cpu m68k
@@ -261,7 +261,7 @@ void m68k_set_irq_delay(unsigned int int_level)
   m68ki_check_interrupts(); /* Level triggered (IRQ) */
 }
 
-void m68k_run(unsigned int cycles) 
+void __time_critical_func(m68k_run)(unsigned int cycles)
 {
     //  printf("m68K_run current_cycles=%d add=%d STOP=%x\n",m68k.cycles,cycles,CPU_STOPPED);
   /* Make sure CPU is not already ahead */
@@ -321,12 +321,12 @@ int m68k_cycles(void)
   return CYC_INSTRUCTION[REG_IR];
 }
 
-int m68k_cycles_run(void)
+int __always_inline m68k_cycles_run(void)
 {
 	return m68k.cycle_end - m68k.cycles;
 }
 
-int m68k_cycles_master(void)
+int __always_inline m68k_cycles_master(void)
 {
 	return m68k.cycles;
 }
