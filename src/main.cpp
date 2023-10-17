@@ -376,7 +376,7 @@ typedef struct __attribute__((__packed__)) {
     char value_list[5][10];
 } MenuItem;
 
-#define MENU_ITEMS_NUMBER 12
+#define MENU_ITEMS_NUMBER 11
 const MenuItem menu_items[MENU_ITEMS_NUMBER] = {
         {"Player 1: %s",        ARRAY, &player_1_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
         //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
@@ -387,7 +387,7 @@ const MenuItem menu_items[MENU_ITEMS_NUMBER] = {
         {"Interlace mode: %s",      ARRAY, &interlace,     1, {"NO ",       "YES"}},
         {"Frameskip: %s",     ARRAY, &frameskip,  1, {"NO ",       "YES"}},
         {"Limit fps: %s",     ARRAY, &limit_fps,    1, {"NO ",       "YES"}},
-        {"Show fps: %s",     ARRAY, &show_fps,    1, {"NO ",       "YES"}},
+        //{"Show fps: %s",     ARRAY, &show_fps,    1, {"NO ",       "YES"}},
         {""},
         {"Reset to ROM select", RESET},
         {"Return to game",      RETURN}
@@ -564,6 +564,10 @@ void gwenesis_io_get_buttons() {
 
 /* Renderer loop on Pico's second core */
 void __time_critical_func(render_core)() {
+    ps2kbd.init_gpio();
+    nespad_begin(clock_get_hz(clk_sys) / 1000, NES_GPIO_CLK, NES_GPIO_DATA, NES_GPIO_LAT);
+
+
     initVGA();
     auto *buffer = reinterpret_cast<uint8_t *>(&SCREEN[0][0]);
     setVGAbuf(buffer, 320, 240);
@@ -575,9 +579,9 @@ void __time_critical_func(render_core)() {
 
     sem_acquire_blocking(&vga_start_semaphore);
 }
-char fps_text[3] = "00";
+char fps_text[5] = "000";
 extern uint8_t fnt8x16[];
-void __inline draw_fps(uint8_t y, uint8_t color) {
+void draw_fps(uint8_t y, uint8_t color) {
     for (uint8_t x = 0; x < 3; x++) {
         uint8_t glyph_col = fnt8x16[(fps_text[x] << 4) + y];
 
@@ -616,8 +620,11 @@ void emulate() {
                     gwenesis_vdp_set_buffer(&SCREEN[scan_line][0]);
                     gwenesis_vdp_render_line(scan_line); /* render scan_line */
                 }
-                if (show_fps && scan_line < 16)
-                    draw_fps(scan_line, 255);
+                if (show_fps && scan_line < 16) {
+                     //draw_fps(scan_line, 255);
+                    //printf("%s", fps_text);
+                }
+
 
             }
 
@@ -663,7 +670,7 @@ void emulate() {
                     diff = end_time - start_time;
                     fps = ((uint64_t) frame * 1000 * 1000) / diff;
 
-                    sprintf(fps_text, "%i", fps);
+                    //sprintf(fps_text, "%i", fps);
                     //draw_text(fps_text, 77, 0, 0xFF, 0x00);
                     frame = 0;
                     start_time = time_us_64();
@@ -711,9 +718,6 @@ int main() {
 #if !NDEBUG
     stdio_init_all();
 #endif
-
-    ps2kbd.init_gpio();
-    nespad_begin(clock_get_hz(clk_sys) / 1000, NES_GPIO_CLK, NES_GPIO_DATA, NES_GPIO_LAT);
 
     sem_init(&vga_start_semaphore, 0, 1);
     multicore_launch_core1(render_core);
