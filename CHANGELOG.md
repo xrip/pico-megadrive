@@ -1,3 +1,7 @@
+# v0.1.0
+- new video driver by @AlexEkb4ever
+- Huge speed optimizations
+- 
 # v0.0.2a
 
 Optimizations
