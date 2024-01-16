@@ -817,7 +817,7 @@ int main() {
     while (true) {
         sleep_ms(50);
         setVGAmode(VGA640x480_text_80_30);
-        filebrowser(HOME_DIR, "gen|md\0");
+        filebrowser(HOME_DIR, "bin|gen|md\0");
         memset(SCREEN, 0, sizeof(SCREEN));
         setVGAmode(VGA640x480div2);
 
