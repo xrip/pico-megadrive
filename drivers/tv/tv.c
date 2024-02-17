@@ -126,7 +126,7 @@ static void pio_set_x(PIO pio, const int sm, const uint32_t v) {
     const uint instr_shift = pio_encode_in(pio_x, 4);
     const uint instr_mov = pio_encode_mov(pio_x, pio_isr);
     for (int i = 0; i < 8; i++) {
-        const uint32_t nibble = (v >> (i * 4)) & 0xf;
+        const uint32_t nibble = v >> i * 4 & 0xf;
         pio_sm_exec(pio, sm, pio_encode_set(pio_x, nibble));
         pio_sm_exec(pio, sm, instr_shift);
     }
@@ -480,6 +480,7 @@ static void __scratch_x("tv_main_loop") main_video_loopTV() {
                         }
                 }
                 else*/
+                if (graphics_buffer.data)
                 switch (graphics_mode) {
                     default:
                     case GRAPHICSMODE_DEFAULT: {
@@ -883,10 +884,8 @@ void graphics_init() {
 }
 
 void clrScr(const uint8_t color) {
-    uint16_t* t_buf = (uint16_t *)text_buffer;
-    int size = TEXTMODE_COLS * TEXTMODE_ROWS;
-
-    while (size--) *t_buf++ = color << 4 | ' ';
+    if (text_buffer)
+        memset(text_buffer, color, TEXTMODE_COLS * TEXTMODE_ROWS * 2);
 }
 
 
