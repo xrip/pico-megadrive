@@ -5,7 +5,7 @@ This is a library for providing an easy-to-use USB mounted drive to a Pico
 based application. The 'drive' is accessible via `fopen`-like functions, as
 well as from the host machine.
 
-It is designed to provide a relatively easy way to provide configuration 
+It is designed to provide a relatively easy way to provide configuration
 details to an application (such as WiFi details) that would otherwise require
 recompilation and redeployment.
 
@@ -28,7 +28,7 @@ target_link_libraries(${NAME}
 )
 ```
 
-(where `${NAME}` is the name of your project).
+(where `${NAME}` is the filename of your project).
 
 
 Functions
@@ -58,5 +58,5 @@ Caveats
 -------
 
 Due to the limitations of FAT (related to sector size and count), this library
-requires the use of the top 512kb of flash memory. This is probably worth 
+requires the use of the top 512kb of flash memory. This is probably worth
 keeping in mind if you have a large application.

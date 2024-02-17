@@ -46,6 +46,7 @@ __license__ = "GPLv3"
 #define Z80_FREQ_DIVISOR 14     // Frequency divisor to Z80 clock
 #define VDP_CYCLES_PER_LINE 3420// VDP Cycles per Line
 #define GWENESIS_SCREEN_WIDTH 320
+#define GWENESIS_SCREEN_HEIGHT 240
 
 #define GWENESIS_AUDIO_SAMPLING_DIVISOR 6 // Audio quality (i.e. sampling rate) 1: best ... 10: poor
 
