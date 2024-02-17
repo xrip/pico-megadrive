@@ -96,7 +96,7 @@
 #define CFG_TUH_ENUMERATION_BUFSIZE 1024
 
 #define CFG_TUH_XINPUT                 1 //
-#define CFG_TUH_HUB                 1 // number of supported hubs
+#define CFG_TUH_HUB                 0 // number of supported hubs
 #define CFG_TUH_CDC                 0
 #define CFG_TUH_HID                 4 // typical keyboard + mouse device can have 3-4 HID interfaces
 #define CFG_TUH_MSC                 0

@@ -773,10 +773,6 @@ int main() {
     sleep_ms(10);
     set_sys_clock_khz(378 * KHZ, true);
 
-#if !NDEBUG
-    stdio_init_all();
-#endif
-
     sem_init(&vga_start_semaphore, 0, 1);
     multicore_launch_core1(render_core);
     sem_release(&vga_start_semaphore);
@@ -793,7 +789,7 @@ int main() {
 
     while (true) {
         graphics_set_mode(TEXTMODE_DEFAULT);
-        filebrowser(HOME_DIR, "bin");
+        filebrowser(HOME_DIR, "bin,md,gen");
         graphics_set_mode(GRAPHICSMODE_DEFAULT);
 
         load_cartridge(rom);
