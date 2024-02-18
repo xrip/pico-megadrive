@@ -275,13 +275,14 @@ void __inline __scratch_y("refresh_lcd") refresh_lcd() {
             break;
         case GRAPHICSMODE_DEFAULT: {
             const uint8_t* bitmap = graphics_buffer;
-            lcd_set_window(graphics_buffer_shift_x, graphics_buffer_shift_y, 240,
-                           graphics_buffer_height);
+            lcd_set_window(0, 0, 240,
+                           240);
             uint32_t i = graphics_buffer_width * graphics_buffer_height;
+            uint8_t start = graphics_buffer_width == 320 ? 40 : 8;
             start_pixels();
             for (int y = 0; y < graphics_buffer_height; y++)
                 for (int x = 0; x < 240; x++) {
-                    const uint16_t color = palette[bitmap[40 + x + y * graphics_buffer_width]];
+                    const uint16_t color = palette[bitmap[start + x + y * graphics_buffer_width]];
 
                     st7789_lcd_put_pixel(pio, sm, color);
                 }
