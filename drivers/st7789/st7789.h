@@ -28,7 +28,7 @@
 #define TFT_DC_PIN 10
 #endif
 
-#define TEXTMODE_COLS 53
+#define TEXTMODE_COLS 40
 #define TEXTMODE_ROWS 30
 
 #define RGB888(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))

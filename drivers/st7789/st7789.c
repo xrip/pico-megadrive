@@ -20,7 +20,7 @@
 #include "hardware/dma.h"
 
 #ifndef SCREEN_WIDTH
-#define SCREEN_WIDTH 320
+#define SCREEN_WIDTH 240
 #endif
 
 #ifndef SCREEN_HEIGHT
@@ -68,6 +68,33 @@ static const uint8_t init_seq[] = {
     1, 2, 0x20, // Inversion OFF
     1, 2, 0x13, // Normal display on, then 10 ms delay
     1, 2, 0x29, // Main screen turn on, then wait 500 ms
+    0 // Terminate list
+};
+
+static const uint8_t init_seq_gc9a01[] = {
+    2, 1, 0xEB, 0x14,
+    1, 1, 0xFE,
+    1, 1, 0xEF,
+
+    2, 0, 0x36, MADCTL_BGR_PIXEL_ORDER, // Set MADCTL
+    2, 2, 0x3a, 0x55, // Set colour mode to 16 bit
+    2, 1, 0x84, 0x40, // Rotation and mirroring
+
+    3, 1, 0xB6, 0x00, 0x20,
+
+    13, 3, 0x62, 0x18, 0x0D, 0x71, 0xED, 0x70, 0x70, 0x18, 0x0F, 0x71, 0xEF, 0x70, 0x70,
+    13, 3, 0x63, 0x18, 0x11, 0x71, 0xF1, 0x70, 0x70, 0x18, 0x13, 0x71, 0xF3, 0x70, 0x70,
+    8, 3, 0x64, 0x28, 0x29, 0xF1, 0x01, 0xF1, 0x00, 0x07,
+    11, 3, 0x66, 0x3C, 0x00, 0xCD, 0x67, 0x45, 0x45, 0x10, 0x00, 0x00, 0x00,
+    11, 3, 0x67, 0x00, 0x3C, 0x00, 0x00, 0x00, 0x01, 0x54, 0x10, 0x32, 0x98,
+
+    8, 2, 0x74, 0x10, 0x85, 0x80, 0x00, 0x00, 0x4E, 0x00,
+    3, 1, 0x98, 0x3e, 0x07,
+
+    1, 1, 0x35,
+    1, 1, 0x21,
+    1, 20, 0x11,
+    1, 5, 0x29,
     0 // Terminate list
 };
 // Format: cmd length (including cmd byte), post delay in units of 5 ms, then cmd payload
@@ -167,7 +194,7 @@ void graphics_init() {
 
     gpio_put(TFT_CS_PIN, 1);
     gpio_put(TFT_RST_PIN, 1);
-    lcd_init(init_seq);
+    lcd_init(init_seq_gc9a01);
     gpio_put(TFT_LED_PIN, 1);
 
     for (int i = 0; i < sizeof palette; i++) {
@@ -228,7 +255,7 @@ void __inline __scratch_y("refresh_lcd") refresh_lcd() {
             start_pixels();
             for (int y = 0; y < SCREEN_HEIGHT; y++) {
                 // TODO add auto adjustable padding?
-                st7789_lcd_put_pixel(pio, sm, 0x0000);
+                // st7789_lcd_put_pixel(pio, sm, 0x0000);
 
                 for (int x = 0; x < TEXTMODE_COLS; x++) {
                     const uint16_t offset = (y / 8) * (TEXTMODE_COLS * 2) + x * 2;
@@ -238,24 +265,26 @@ void __inline __scratch_y("refresh_lcd") refresh_lcd() {
 
                     for (uint8_t bit = 0; bit < 6; bit++) {
                         st7789_lcd_put_pixel(pio, sm, textmode_palette[(c && CHECK_BIT(glyph_row, bit))
-                                                                       ? colorIndex & 0x0F
-                                                                       : colorIndex >> 4 & 0x0F]);
+                                                                           ? colorIndex & 0x0F
+                                                                           : colorIndex >> 4 & 0x0F]);
                     }
                 }
-                st7789_lcd_put_pixel(pio, sm, 0x0000);
+                // st7789_lcd_put_pixel(pio, sm, 0x0000);
             }
             stop_pixels();
             break;
         case GRAPHICSMODE_DEFAULT: {
             const uint8_t* bitmap = graphics_buffer;
-            lcd_set_window(graphics_buffer_shift_x, graphics_buffer_shift_y, graphics_buffer_width,
+            lcd_set_window(graphics_buffer_shift_x, graphics_buffer_shift_y, 240,
                            graphics_buffer_height);
             uint32_t i = graphics_buffer_width * graphics_buffer_height;
             start_pixels();
-            // st7789_dma_pixels(graphics_buffer, i);
-            while (--i) {
-               st7789_lcd_put_pixel(pio, sm, palette[*bitmap++]);
-            }
+            for (int y = 0; y < graphics_buffer_height; y++)
+                for (int x = 0; x < 240; x++) {
+                    const uint16_t color = palette[bitmap[40 + x + y * graphics_buffer_width]];
+
+                    st7789_lcd_put_pixel(pio, sm, color);
+                }
             stop_pixels();
         }
     }
@@ -267,4 +296,3 @@ void __inline __scratch_y("refresh_lcd") refresh_lcd() {
 void graphics_set_palette(const uint8_t i, const uint32_t color) {
     palette[i] = (uint16_t)color;
 }
-
