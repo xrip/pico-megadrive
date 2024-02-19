@@ -20,11 +20,11 @@
 #include "hardware/dma.h"
 
 #ifndef SCREEN_WIDTH
-#define SCREEN_WIDTH 240
+#define SCREEN_WIDTH 160
 #endif
 
 #ifndef SCREEN_HEIGHT
-#define SCREEN_HEIGHT 240
+#define SCREEN_HEIGHT 128
 #endif
 
 // 126MHz SPI
@@ -194,7 +194,7 @@ void graphics_init() {
 
     gpio_put(TFT_CS_PIN, 1);
     gpio_put(TFT_RST_PIN, 1);
-    lcd_init(init_seq_gc9a01);
+    lcd_init(init_seq);
     gpio_put(TFT_LED_PIN, 1);
 
     for (int i = 0; i < sizeof palette; i++) {
@@ -255,7 +255,9 @@ void __inline __scratch_y("refresh_lcd") refresh_lcd() {
             start_pixels();
             for (int y = 0; y < SCREEN_HEIGHT; y++) {
                 // TODO add auto adjustable padding?
-                // st7789_lcd_put_pixel(pio, sm, 0x0000);
+                st7789_lcd_put_pixel(pio, sm, 0x0000);
+                st7789_lcd_put_pixel(pio, sm, 0x0000);
+
 
                 for (int x = 0; x < TEXTMODE_COLS; x++) {
                     const uint16_t offset = (y / 8) * (TEXTMODE_COLS * 2) + x * 2;
@@ -269,22 +271,20 @@ void __inline __scratch_y("refresh_lcd") refresh_lcd() {
                                                                            : colorIndex >> 4 & 0x0F]);
                     }
                 }
-                // st7789_lcd_put_pixel(pio, sm, 0x0000);
+                st7789_lcd_put_pixel(pio, sm, 0x0000);
+                st7789_lcd_put_pixel(pio, sm, 0x0000);
             }
             stop_pixels();
             break;
         case GRAPHICSMODE_DEFAULT: {
             const uint8_t* bitmap = graphics_buffer;
-            lcd_set_window(0, graphics_buffer_shift_y, 240,
-                           graphics_buffer_height);
-            uint32_t i = graphics_buffer_width * graphics_buffer_height;
-            uint8_t start = graphics_buffer_shift_x == 0 ? 40 : 8;
+            lcd_set_window(0, 8, 160,
+                           128);
             start_pixels();
-            for (int y = 0; y < graphics_buffer_height; y++)
-                for (int x = 0; x < 240; x++) {
-                    const uint16_t color = palette[bitmap[start + x + y * graphics_buffer_width]];
 
-                    st7789_lcd_put_pixel(pio, sm, color);
+            for (int y = 0; y < 240; y+=2)
+                for (int x = 0; x < 320; x+=2) {
+                    st7789_lcd_put_pixel(pio, sm, palette[bitmap[x + y * 320]]);
                 }
             stop_pixels();
         }

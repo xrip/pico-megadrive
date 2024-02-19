@@ -28,8 +28,8 @@
 #define TFT_DC_PIN 10
 #endif
 
-#define TEXTMODE_COLS 40
-#define TEXTMODE_ROWS 30
+#define TEXTMODE_COLS 26
+#define TEXTMODE_ROWS 16
 
 #define RGB888(r, g, b) ((((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3))
 static const uint16_t textmode_palette[16] = {
