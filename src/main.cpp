@@ -143,7 +143,7 @@ int frame_timer_start = 0;
 int system_clock;
 
 unsigned int lines_per_frame = LINES_PER_FRAME_NTSC; //262; /* NTSC: 262, PAL: 313 */
-unsigned int scan_line;
+int scan_line;
 unsigned int frame_counter = 0;
 unsigned int drawFrame = 1;
 
