@@ -308,10 +308,10 @@ void __time_critical_func() dma_handler_VGA() {
             }
             break;
         }
+        // Это только для sega
         case GRAPHICSMODE_DEFAULT:
-            input_buffer_8bit = input_buffer + y * width;
+            input_buffer_8bit = input_buffer + y * 320;
             for (int i = width; i--;) {
-                //*output_buffer_16bit++=current_palette[*input_buffer_8bit++];
                 *output_buffer_16bit++ = current_palette[*input_buffer_8bit++];
             }
             break;
