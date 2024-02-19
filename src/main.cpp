@@ -680,17 +680,19 @@ void __scratch_x("render") render_core() {
 }
 
 
-void emulate() {
-    int hint_counter;
-
+void __time_critical_func(emulate)() {
+    const auto buffer = (uint8_t *)SCREEN;
     while (!reboot) {
         /* Eumulator loop */
-        hint_counter = gwenesis_vdp_regs[10];
+        int hint_counter = gwenesis_vdp_regs[10];
 
-        screen_height = REG1_PAL ? 240 : 224;
+        const bool is_pal = REG1_PAL;
+        screen_height = is_pal ? 240 : 224;
         screen_width = REG12_MODE_H40 ? 320 : 256;
-        lines_per_frame = REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC;
-        graphics_set_offset(screen_width != 320 ? 32 : 0, screen_height != 240 ? 8 : 0);
+        lines_per_frame = is_pal ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC;
+
+        // graphics_set_buffer(buffer, screen_width, screen_height);
+        graphics_set_offset(screen_width != 320 ? 0 : 0, screen_height != 240 ? 8 : 0);
         gwenesis_vdp_render_config();
 
         /* Reset the difference clocks and audio index */
@@ -747,9 +749,10 @@ void emulate() {
 
                 frame++;
                 if (limit_fps) {
+
                     frame_cnt++;
-                    if (frame_cnt == 6) {
-                        while (time_us_64() - frame_timer_start < 16667 * 6);  // 60 Hz
+                    if (frame_cnt == (is_pal ? 5 : 6)) {
+                        while (time_us_64() - frame_timer_start < (is_pal ? 20000 : 16666) * 6);  // 60 Hz
                         frame_timer_start = time_us_64();
                         frame_cnt = 0;
                     }
