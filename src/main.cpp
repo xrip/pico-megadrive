@@ -158,6 +158,8 @@ enum menu_type_e {
     TEXT,
     ARRAY,
 
+    OVERCLOCK,
+
     SAVE,
     LOAD,
     ROM_SELECT,
@@ -172,9 +174,14 @@ typedef struct __attribute__((__packed__)) {
     char value_list[5][10];
 } MenuItem;
 
+uint16_t overclock[3] = { 378, 396, 416 };
+uint8_t overclock_v = 0;
+
 const MenuItem menu_items[] = {
         {"Player 1: %s",        ARRAY, &player_1_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
-        //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+        {"Overclocking: %s",        OVERCLOCK, &overclock_v, 2, {"378 Mhz", "396 Mhz", "416 Mhz"}},
+// OVERCLOCK
+    //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
         {""},
         {"Flash line: %s",      ARRAY, &flash_line,     1, {"NO ",       "YES"}},
         {"Flash frame: %s",     ARRAY, &flash_frame,    1, {"NO ",       "YES"}},
@@ -237,6 +244,24 @@ void menu() {
                             }
                         }
                         break;
+                    case OVERCLOCK:
+                        if (item->max_value != 0) {
+                            auto* value = (uint8_t *)item->value;
+                            if ((gamepad1_bits.right || keyboard_bits.right) && *value < item->max_value) {
+                                (*value)++;
+                                hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
+                                sleep_ms(10);
+                                set_sys_clock_khz(overclock[overclock_v] * KHZ, true);
+                            }
+                            if ((gamepad1_bits.left || keyboard_bits.left) && *value > 0) {
+                                (*value)--;
+                                hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
+                                sleep_ms(10);
+                                set_sys_clock_khz(overclock[overclock_v] * KHZ, true);
+
+                            }
+                        }
+                        break;
                     case SAVE:
                         if (gamepad1_bits.start || keyboard_bits.start) {
                             // save();
@@ -268,6 +293,7 @@ void menu() {
                     snprintf(result, TEXTMODE_COLS, item->text, *(uint8_t *)item->value);
                     break;
                 case ARRAY:
+                case OVERCLOCK:
                     snprintf(result, TEXTMODE_COLS, item->text, item->value_list[*(uint8_t *)item->value]);
                     break;
                 case TEXT:
