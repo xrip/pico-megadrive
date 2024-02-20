@@ -707,7 +707,6 @@ void __scratch_x("render") render_core() {
 
 
 void __time_critical_func(emulate)() {
-    const auto buffer = (uint8_t *)SCREEN;
     while (!reboot) {
         /* Eumulator loop */
         int hint_counter = gwenesis_vdp_regs[10];
