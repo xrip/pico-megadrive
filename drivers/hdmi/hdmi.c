@@ -211,7 +211,7 @@ static void __scratch_y("hdmi_driver") dma_handler_HDMI() {
 
                 while (activ_buf_end > output_buffer) {
                     if (input_buffer < input_buffer_end) {
-                        uint8_t i_color = *input_buffer++;
+                        uint8_t i_color = *input_buffer++ % 64;
                         i_color = ((i_color & 0xf0) == 0xf0) ? 255 : i_color;
                         *output_buffer++ = i_color;
                     }
