@@ -1,7 +1,13 @@
+# v0.5.0
+- hdmi / vga / tft / tv composite versions added
+- filebrowser reworked
+- speed improvements
+
+
 # v0.1.0
 - new video driver by @AlexEkb4ever
 - Huge speed optimizations
-- 
+ 
 # v0.0.2a
 
 Optimizations
