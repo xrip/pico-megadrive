@@ -336,7 +336,14 @@ int compareFileItems(const void* a, const void* b) {
 
 bool isExecutable(const char pathname[255],const char *extensions) {
     char *pathCopy = strdup(pathname);
-    const char* token = strtok(pathCopy, ".");
+    const char* token = strrchr(pathCopy, '.');
+
+    if (token == nullptr) {
+        return false;
+    }
+
+    token++;
+
     while (token != NULL) {
         if (strstr(extensions, token) != NULL) {
             free(pathCopy);
