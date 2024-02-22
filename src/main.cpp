@@ -198,17 +198,17 @@ bool save() {
 
 
 const MenuItem menu_items[] = {
+    //{"Player 1: %s",        ARRAY, &player_1_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+    //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
     { "Frameskip: %s", ARRAY, &frameskip, nullptr, 1, { "NO ", "YES" } },
     { "Interlace mode: %s", ARRAY, &interlace, nullptr, 1, { "NO ", "YES" } },
     {
         "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
         { "378", "396", "404", "408", "412", "416", "420", "424", "432" }
     },
-    {},
-    { "Save state: %i", INT, &save_slot, &save, 5 },
-    { "Load state: %i", INT, &save_slot, &load, 5 },
-    // OVERCLOCK
-    //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+    // {},
+    // { "Save state: %i", INT, &save_slot, &save, 5 },
+    // { "Load state: %i", INT, &save_slot, &load, 5 },
     // { "" },
     // { "Flash line: %s", ARRAY, &flash_line, nullptr, 1, { "NO ", "YES" } },
     // { "Flash frame: %s", ARRAY, &flash_frame, nullptr, 1, { "NO ", "YES" } },
