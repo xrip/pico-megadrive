@@ -25,13 +25,15 @@ extern "C" {
 #include "ps2kbd_mrmltr.h"
 #include "ff.h"
 
-#ifndef OVERCLOCKING
-#define OVERCLOCKING 378
-#endif
+
 #define HOME_DIR "\\SEGA"
+
 #define FLASH_TARGET_OFFSET (900 * 1024)
-static constexpr uintptr_t rom = (XIP_BASE + FLASH_TARGET_OFFSET);
+static constexpr uintptr_t rom = XIP_BASE + FLASH_TARGET_OFFSET;
+char __uninitialized_ram(filename[256]);
+
 static FATFS fs;
+
 semaphore vga_start_semaphore;
 static uint8_t SCREEN[240][320];
 
@@ -44,8 +46,8 @@ enum input_device {
 // SETTINGS
 bool show_fps = true;
 bool limit_fps = true;
-bool interlace = (OVERCLOCKING < 366);
-bool frameskip = (OVERCLOCKING < 400);
+bool interlace = false;
+bool frameskip = true;
 bool flash_line = true;
 bool flash_frame = true;
 uint8_t player_1_input = GAMEPAD1;
@@ -54,8 +56,7 @@ uint8_t player_2_input = KEYBOARD;
 bool reboot = false;
 
 
-
-typedef struct  __attribute__((__packed__)) {
+typedef struct __attribute__((__packed__)) {
     bool a: 1;
     bool b: 1;
     bool c: 1;
@@ -96,7 +97,7 @@ void nespad_tick() {
     gamepad2_bits.right = (nespad_state2 & DPAD_RIGHT) != 0;
 }
 
-static bool isInReport(hid_keyboard_report_t const *report, const unsigned char keycode) {
+static bool isInReport(hid_keyboard_report_t const* report, const unsigned char keycode) {
     for (unsigned char i: report->keycode) {
         if (i == keycode) {
             return true;
@@ -106,7 +107,7 @@ static bool isInReport(hid_keyboard_report_t const *report, const unsigned char 
 }
 
 void
-__not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const *report, hid_keyboard_report_t const *prev_report) {
+__not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const* report, hid_keyboard_report_t const* prev_report) {
     /* printf("HID key report modifiers %2.2X report ", report->modifier);
     for (unsigned char i: report->keycode)
         printf("%2.2X", i);
@@ -128,9 +129,9 @@ __not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const *report, hid
 }
 
 Ps2Kbd_Mrmltr ps2kbd(
-        pio1,
-        0,
-        process_kbd_report);
+    pio1,
+    0,
+    process_kbd_report);
 
 
 int start_time = 0;
@@ -152,13 +153,12 @@ extern unsigned int gwenesis_vdp_status;
 extern unsigned int screen_width, screen_height;
 extern int hint_pending;
 
+
 enum menu_type_e {
     EMPTY,
     INT,
     TEXT,
     ARRAY,
-
-    OVERCLOCK,
 
     SAVE,
     LOAD,
@@ -166,33 +166,55 @@ enum menu_type_e {
     RETURN,
 };
 
+
+typedef bool (*menu_callback_t)();
+
 typedef struct __attribute__((__packed__)) {
-    const char *text;
+    const char* text;
     menu_type_e type;
-    const void *value;
+    const void* value;
+    menu_callback_t callback;
     uint8_t max_value;
-    char value_list[5][10];
+    char value_list[15][10];
 } MenuItem;
 
-uint16_t overclock[3] = { 378, 396, 416 };
-uint8_t overclock_v = 0;
+int save_slot = 0;
+uint16_t frequencies[] = { 378, 396, 404, 408, 412, 416, 420, 424, 432 };
+uint8_t frequency_index = 0;
+
+bool overclock() {
+    hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
+    sleep_ms(10);
+    return set_sys_clock_khz(frequencies[frequency_index] * KHZ, true);
+}
+
+bool load() {
+    return true;
+}
+
+bool save() {
+    return true;
+}
+
 
 const MenuItem menu_items[] = {
-        {"Player 1: %s",        ARRAY, &player_1_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
-        {"Overclocking: %s",        OVERCLOCK, &overclock_v, 2, {"378 Mhz", "396 Mhz", "416 Mhz"}},
-// OVERCLOCK
+    { "Frameskip: %s", ARRAY, &frameskip, nullptr, 1, { "NO ", "YES" } },
+    { "Interlace mode: %s", ARRAY, &interlace, nullptr, 1, { "NO ", "YES" } },
+    {
+        "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
+        { "378", "396", "404", "408", "412", "416", "420", "424", "432" }
+    },
+    {},
+    { "Save state: %i", INT, &save_slot, &save, 5 },
+    { "Load state: %i", INT, &save_slot, &load, 5 },
+    // OVERCLOCK
     //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
-        {""},
-        {"Flash line: %s",      ARRAY, &flash_line,     1, {"NO ",       "YES"}},
-        {"Flash frame: %s",     ARRAY, &flash_frame,    1, {"NO ",       "YES"}},
-        {""},
-        {"Interlace mode: %s",      ARRAY, &interlace,     1, {"NO ",       "YES"}},
-        {"Frameskip: %s",     ARRAY, &frameskip,  1, {"NO ",       "YES"}},
-        {"Limit fps: %s",     ARRAY, &limit_fps,    1, {"NO ",       "YES"}},
-        //{"Show fps: %s",     ARRAY, &show_fps,    1, {"NO ",       "YES"}},
-        {""},
-        {"Reset to ROM select", ROM_SELECT},
-        {"Return to game",      RETURN}
+    // { "" },
+    // { "Flash line: %s", ARRAY, &flash_line, nullptr, 1, { "NO ", "YES" } },
+    // { "Flash frame: %s", ARRAY, &flash_frame, nullptr, 1, { "NO ", "YES" } },
+    { "" },
+    { "Reset to ROM select", ROM_SELECT },
+    { "Return to game", RETURN }
 };
 
 #define MENU_ITEMS_NUMBER (sizeof(menu_items) / sizeof (MenuItem))
@@ -209,17 +231,6 @@ void menu() {
     uint current_item = 0;
 
     while (!exit) {
-        sleep_ms(25);
-        if (gamepad1_bits.down || keyboard_bits.down) {
-            current_item = (current_item + 1) % MENU_ITEMS_NUMBER;
-            if (menu_items[current_item].type == NONE)
-                current_item++;
-        }
-        if (gamepad1_bits.up || keyboard_bits.up) {
-            current_item = (current_item - 1 + MENU_ITEMS_NUMBER) % MENU_ITEMS_NUMBER;
-            if (menu_items[current_item].type == NONE)
-                current_item--;
-        }
         for (int i = 0; i < MENU_ITEMS_NUMBER; i++) {
             uint8_t y = i + (TEXTMODE_ROWS - MENU_ITEMS_NUMBER >> 1);
             uint8_t x = TEXTMODE_COLS / 2 - 10;
@@ -244,36 +255,6 @@ void menu() {
                             }
                         }
                         break;
-                    case OVERCLOCK:
-                        if (item->max_value != 0) {
-                            auto* value = (uint8_t *)item->value;
-                            if ((gamepad1_bits.right || keyboard_bits.right) && *value < item->max_value) {
-                                (*value)++;
-                                hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
-                                sleep_ms(10);
-                                set_sys_clock_khz(overclock[overclock_v] * KHZ, true);
-                            }
-                            if ((gamepad1_bits.left || keyboard_bits.left) && *value > 0) {
-                                (*value)--;
-                                hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
-                                sleep_ms(10);
-                                set_sys_clock_khz(overclock[overclock_v] * KHZ, true);
-
-                            }
-                        }
-                        break;
-                    case SAVE:
-                        if (gamepad1_bits.start || keyboard_bits.start) {
-                            // save();
-                            exit = true;
-                        }
-                        break;
-                    case LOAD:
-                        if (gamepad1_bits.start || keyboard_bits.start) {
-                            // load();
-                            exit = true;
-                        }
-                        break;
                     case RETURN:
                         if (gamepad1_bits.start || keyboard_bits.start)
                             exit = true;
@@ -285,6 +266,12 @@ void menu() {
                             return;
                         }
                         break;
+                    default:
+                        break;
+                }
+
+                if (nullptr != item->callback && (gamepad1_bits.start || keyboard_bits.start)) {
+                    exit = item->callback();
                 }
             }
             static char result[TEXTMODE_COLS];
@@ -293,24 +280,37 @@ void menu() {
                     snprintf(result, TEXTMODE_COLS, item->text, *(uint8_t *)item->value);
                     break;
                 case ARRAY:
-                case OVERCLOCK:
                     snprintf(result, TEXTMODE_COLS, item->text, item->value_list[*(uint8_t *)item->value]);
                     break;
                 case TEXT:
                     snprintf(result, TEXTMODE_COLS, item->text, item->value);
                     break;
+                case NONE:
+                    color = 6;
                 default:
                     snprintf(result, TEXTMODE_COLS, "%s", item->text);
             }
             draw_text(result, x, y, color, bg_color);
         }
-        sleep_ms(100);
+
+        if (gamepad1_bits.down || keyboard_bits.down) {
+            current_item = (current_item + 1) % MENU_ITEMS_NUMBER;
+
+            if (menu_items[current_item].type == NONE)
+                current_item++;
+        }
+        if (gamepad1_bits.up || keyboard_bits.up) {
+            current_item = (current_item - 1 + MENU_ITEMS_NUMBER) % MENU_ITEMS_NUMBER;
+
+            if (menu_items[current_item].type == NONE)
+                current_item--;
+        }
+
+        sleep_ms(125);
     }
 
     graphics_set_mode(GRAPHICSMODE_DEFAULT);
 }
-
-
 
 typedef struct __attribute__((__packed__)) {
     bool is_directory;
@@ -320,7 +320,7 @@ typedef struct __attribute__((__packed__)) {
 } file_item_t;
 
 constexpr int max_files = 600;
-file_item_t * fileItems = (file_item_t *)(&SCREEN[0][0] + TEXTMODE_COLS*TEXTMODE_ROWS*2);
+file_item_t* fileItems = (file_item_t *)(&SCREEN[0][0] + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
 
 int compareFileItems(const void* a, const void* b) {
     const auto* itemA = (file_item_t *)a;
@@ -334,8 +334,8 @@ int compareFileItems(const void* a, const void* b) {
     return strcmp(itemA->filename, itemB->filename);
 }
 
-bool isExecutable(const char pathname[255],const char *extensions) {
-    char *pathCopy = strdup(pathname);
+bool isExecutable(const char pathname[255], const char* extensions) {
+    char* pathCopy = strdup(pathname);
     const char* token = strrchr(pathCopy, '.');
 
     if (token == nullptr) {
@@ -607,6 +607,7 @@ void filebrowser(const char pathname[256], const char executables[11]) {
         }
     }
 }
+
 extern unsigned short button_state[3];
 
 void gwenesis_io_get_buttons() {
@@ -649,21 +650,22 @@ void gwenesis_io_get_buttons() {
 
     button_state[0] = ~button_state[0];
 
-/*    button_state[2] = player2_state.left << PAD_LEFT |
-                      player2_state.right << PAD_RIGHT |
-                      player2_state.up << PAD_UP |
-                      player2_state.down << PAD_DOWN |
-                      player2_state.start << PAD_S |
-                      player2_state.a << PAD_A |
-                      player2_state.b << PAD_B |
-                      player2_state.c << PAD_C;
+    /*    button_state[2] = player2_state.left << PAD_LEFT |
+                          player2_state.right << PAD_RIGHT |
+                          player2_state.up << PAD_UP |
+                          player2_state.down << PAD_DOWN |
+                          player2_state.start << PAD_S |
+                          player2_state.a << PAD_A |
+                          player2_state.b << PAD_B |
+                          player2_state.c << PAD_C;
 
-    button_state[2] = ~button_state[2];*/
+        button_state[2] = ~button_state[2];*/
 
     if ((gamepad1_bits.start && gamepad1_bits.c) || (keyboard_bits.start && keyboard_bits.mode)) {
         menu();
     }
 }
+
 /* Renderer loop on Pico's second core */
 void __scratch_x("render") render_core() {
     multicore_lockout_victim_init();
@@ -748,7 +750,6 @@ void __time_critical_func(emulate)() {
             // On these lines, the line counter interrupt is reloaded
             if (scan_line == 0 || scan_line > screen_height) {
                 hint_counter = REG10_LINE_COUNTER;
-
             }
 
             // interrupt line counter
@@ -775,16 +776,16 @@ void __time_critical_func(emulate)() {
                 // FRAMESKIP every 3rd frame
                 if (frameskip && frame % 3 == 0) {
                     drawFrame = 0;
-                } else {
+                }
+                else {
                     drawFrame = 1;
                 }
 
                 frame++;
                 if (limit_fps) {
-
                     frame_cnt++;
                     if (frame_cnt == (is_pal ? 5 : 6)) {
-                        while (time_us_64() - frame_timer_start < (is_pal ? 20000 : 16666) * 6);  // 60 Hz
+                        while (time_us_64() - frame_timer_start < (is_pal ? 20000 : 16666) * 6); // 60 Hz
                         frame_timer_start = time_us_64();
                         frame_cnt = 0;
                     }
