@@ -217,7 +217,7 @@ const MenuItem menu_items[] = {
     { "Return to game", RETURN }
 };
 
-#define MENU_ITEMS_NUMBER (sizeof(menu_items) / sizeof (MenuItem))
+#define MENU_ITEMS_NUMBER count_of(menu_items)
 
 void menu() {
     bool exit = false;
@@ -687,27 +687,24 @@ void __scratch_x("render") render_core() {
     // 60 FPS loop
 #define frame_tick (16666)
     uint64_t tick = time_us_64();
-#ifdef TFT
-    uint64_t last_renderer_tick = tick;
-#endif
-    uint64_t last_input_tick = tick;
+    uint64_t last_frame_tick = tick;
+
     while (true) {
+
+        if (tick >= last_frame_tick + frame_tick) {
 #ifdef TFT
-        if (tick >= last_renderer_tick + frame_tick) {
             refresh_lcd();
-            last_renderer_tick = tick;
-        }
 #endif
-        if (tick >= last_input_tick + frame_tick * 1) {
             ps2kbd.tick();
             nespad_tick();
-            last_input_tick = tick;
+
+            last_frame_tick = tick;
         }
+
         tick = time_us_64();
 
-
         // tuh_task();
-        //hid_app_task();
+        // hid_app_task();
         tight_loop_contents();
     }
 
@@ -805,9 +802,7 @@ void __time_critical_func(emulate)() {
 }
 
 int main() {
-    hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
-    sleep_ms(10);
-    set_sys_clock_khz(378 * KHZ, true);
+    overclock();
 
     sem_init(&vga_start_semaphore, 0, 1);
     multicore_launch_core1(render_core);
