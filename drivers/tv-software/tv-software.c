@@ -22,7 +22,7 @@ static tv_out_mode_t tv_out_mode={
 	.tv_system=g_TV_OUT_NTSC,
 	.N_lines=_525_lines,
 	.mode_bpp=g_mode_320x240x8bpp,
-	.c_freq=_4433619,
+	.c_freq=_3579545,
 	.color_index=1.0,//0-1
 	.cb_sync_PI_shift_lines=false,
 	.cb_sync_PI_shift_half_frame=true
@@ -142,12 +142,12 @@ static int dma_chan=-1;
 
 
 //ДМА палитра для конвертации(256 знач)
-static uint32_t conv_colorNORM[2][256]; //2к
-static uint32_t conv_colorINV[2][256];	//2к
-static uint32_t* conv_color[2];
+static uint32_t  conv_colorNORM[2][256]; //2к
+static uint32_t  conv_colorINV[2][256];	//2к
+static uint32_t*   conv_color[2];
 
 //палитра сохранённая
-static uint8_t paletteRGB[3][256];	//768 байт
+static uint8_t __scratch_x("buff4")  paletteRGB[3][256];	//768 байт
 
 static repeating_timer_t video_timer;
 
@@ -461,7 +461,7 @@ void graphics_set_palette(uint8_t i, uint32_t color888){
 
 
 //основная функция заполнения буферов видеоданных
-static void __not_in_flash_func(main_video_loopTV)(){
+static void __scratch_x("main_video_loopTV")main_video_loopTV(){
 	static uint dma_inx_out=0;
 	static uint lines_buf_inx=0;
 
