@@ -50,7 +50,7 @@ typedef  struct tv_out_mode_t
 void graphics_set_modeTV(tv_out_mode_t mode);
 tv_out_mode_t graphics_get_default_modeTV();
 
-void graphics_set_paletteTV(uint8_t i, uint32_t color888);
+void graphics_set_palette(uint8_t i, uint32_t color888);
 
 
 //для совместимости(удалить в других проектах)
@@ -67,3 +67,11 @@ typedef enum g_out{
     g_out_HDMI  = 2
 }g_out;
 bool graphics_try_framerate(g_out g_out,fr_rate rate, bool apply);
+
+static void graphics_set_flashmode(bool flash_line, bool flash_frame) {
+    // dummy
+}
+
+static void graphics_set_bgcolor(uint32_t color888) {
+    // dummy
+}

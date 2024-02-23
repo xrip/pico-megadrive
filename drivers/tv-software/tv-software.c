@@ -1,3 +1,4 @@
+#
 //программный композит
 #include <stdio.h>
 #include "graphics.h"
@@ -13,12 +14,14 @@
 #include "hardware/pio.h"
 #include "pico/stdlib.h"
 #include "stdlib.h"
+#pragma GCC optimize("Ofast")
+uint8_t* text_buffer = NULL;
 
 //параметры по умолчанию
 static tv_out_mode_t tv_out_mode={
 	.tv_system=g_TV_OUT_NTSC,
 	.N_lines=_525_lines,
-	.mode_bpp=g_mode_320x240x4bpp,
+	.mode_bpp=g_mode_320x240x8bpp,
 	.c_freq=_4433619,
 	.color_index=1.0,//0-1
 	.cb_sync_PI_shift_lines=false,
@@ -153,7 +156,7 @@ void graphics_set_modeTV(tv_out_mode_t mode){
 	if (SM_video==-1) return;
 	//можно добавить проверку на валидность данных, но пока так
 	tv_out_mode=mode;
-	for(int i=0;i<256;i++){graphics_set_paletteTV(i,(paletteRGB[2][i]<<16)|(paletteRGB[1][i]<<8)|(paletteRGB[0][i]<<0));};
+	for(int i=0;i<256;i++){graphics_set_palette(i,(paletteRGB[2][i]<<16)|(paletteRGB[1][i]<<8)|(paletteRGB[0][i]<<0));};
 
 	switch (tv_out_mode.N_lines)
 	{
@@ -214,7 +217,7 @@ static uint32_t cbINV[2][10];//цветовая вспышка	инвертир�
 
 static uint32_t* cb[2];//цветовая вспышка
 //определение палитры(переделать)
-void graphics_set_paletteTV(uint8_t i, uint32_t color888){
+void graphics_set_palette(uint8_t i, uint32_t color888){
 
 		conv_color[0]=conv_colorNORM[0];
 		conv_color[1]=conv_colorNORM[1];
@@ -1028,44 +1031,17 @@ static void __not_in_flash_func(main_video_loopTV)(){
 							
 
 							if (vbuf!=NULL)
-								for(int i=0;i<(v_mode.img_W-d_end)/4;i++)
-								{	
-									*out_buf8++=c_4[0];
+								for(int i=0;i<(v_mode.img_W-d_end);i++)
+								{
+									*out_buf8++=c_4[i % 4];
 									next_ibuf-=di;
 									if (next_ibuf<=0)
 									{
-											c8=*(vbuf8++);
-											cout32=conv_color[li][c8];
-											next_ibuf+=0x100;
+										c8=*(vbuf8++);
+										cout32=conv_color[li][c8];
+										next_ibuf+=0x100;
 									}
 
-									*out_buf8++=c_4[1];
-									next_ibuf-=di;
-									if (next_ibuf<=0)
-									{
-											c8=*(vbuf8++);
-											cout32=conv_color[li][c8];
-											next_ibuf+=0x100;
-									}
-
-									*out_buf8++=c_4[2];
-									next_ibuf-=di;
-									if (next_ibuf<=0)
-									{
-											c8=*(vbuf8++);
-											cout32=conv_color[li][c8];
-											next_ibuf+=0x100;
-									}
-
-									*out_buf8++=c_4[3];
-									next_ibuf-=di;
-									if (next_ibuf<=0)
-									{
-											c8=*(vbuf8++);
-											cout32=conv_color[li][c8];
-											next_ibuf+=0x100;
-									}
-									
 								}
 						}
 				}
@@ -1082,8 +1058,10 @@ static void __not_in_flash_func(main_video_loopTV)(){
 	}
 }
 
-void graphics_set_buffer(uint8_t *buffer){
+void graphics_set_buffer(uint8_t* buffer, const uint16_t width, const uint16_t height) {
 	g_buf.data=buffer;
+	g_buf.width = width;
+	g_buf.height = height;
 }
 
 
@@ -1101,11 +1079,11 @@ tv_out_mode_t graphics_get_default_modeTV()
 	tv_out_mode_t tv_mode={
 	.tv_system=g_TV_OUT_NTSC,
 	.N_lines=_524_lines,
-	.mode_bpp=g_mode_320x240x4bpp,
-	.c_freq=_3579545,
+	.mode_bpp=g_mode_320x240x8bpp,
+	.c_freq=_4433619,
 	.color_index=1.0,
 	.cb_sync_PI_shift_lines=false,
-	.cb_sync_PI_shift_half_frame=false
+	.cb_sync_PI_shift_half_frame=true
 	};
 	return tv_mode;
 };
@@ -1130,7 +1108,7 @@ void graphics_init(){
 	//---------------
 
 	//заполнение палитры по умолчанию(ч.б.)
-	for(int ci=0;ci<256;ci++) graphics_set_paletteTV(ci,(ci<<16)|(ci<<8)|ci);//
+	for(int ci=0;ci<256;ci++) graphics_set_palette(ci,(ci<<16)|(ci<<8)|ci);//
 
 
 	//настройка рабочей SM TV
@@ -1239,4 +1217,23 @@ void graphics_init(){
 	if (!add_repeating_timer_us(1000000 / hz, video_timer_callbackTV, NULL, &video_timer)) {
 		return ;
 	}
+	// graphics_get_default_modeTV();
+	graphics_set_modeTV(tv_out_mode);
 };
+
+void graphics_set_textbuffer(uint8_t* buffer) {
+	text_buffer = buffer;
+};
+
+void graphics_set_offset(const int x, const int y) {
+	// g_buf.shift_x = x;
+	// g_buf.shift_y = y;
+};
+
+void clrScr(const uint8_t color) {
+	if (text_buffer)
+		memset(text_buffer, color, TEXTMODE_COLS * TEXTMODE_ROWS * 2);
+}
+
+void graphics_set_mode(const enum graphics_mode_t mode) {
+}
