@@ -380,7 +380,7 @@ void graphics_set_palette(uint8_t i, uint32_t color888) {
             Q = 1;
             I = -1;
             for (int i = 0; i < 40; i++) {
-                ampl = max_ampl * 0.8; //уменьшение амплитуды - ярче цвета, но и больше размазывание цвета
+                ampl = max_ampl * 0.5; //уменьшение амплитуды - ярче цвета, но и больше размазывание цвета
                 if (i < cycle_size * 1) ampl = i * max_ampl / cycle_size;
                 if (i > (cycle_size * 9)) ampl = (cycle_size * 10 - i) * (max_ampl) / cycle_size;
 
