@@ -819,8 +819,8 @@ int main() {
     }
 
     while (true) {
-        // graphics_set_mode(TEXTMODE_DEFAULT);
-        // filebrowser(HOME_DIR, "bin,md,gen");
+        graphics_set_mode(TEXTMODE_DEFAULT);
+        filebrowser(HOME_DIR, "bin,md,gen");
         graphics_set_mode(GRAPHICSMODE_DEFAULT);
 
         load_cartridge(rom);
