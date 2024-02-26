@@ -285,7 +285,7 @@ void menu() {
                 case TEXT:
                     snprintf(result, TEXTMODE_COLS, item->text, item->value);
                     break;
-                case NONE:
+                case EMPTY:
                     color = 6;
                 default:
                     snprintf(result, TEXTMODE_COLS, "%s", item->text);

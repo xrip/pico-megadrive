@@ -36,7 +36,7 @@ static tv_out_mode_t tv_out_mode = {
     .mode_bpp = GRAPHICSMODE_DEFAULT,
     .c_freq = _3579545,
     .color_index = 1.0, //0-1
-    .cb_sync_PI_shift_lines = false,
+    .cb_sync_PI_shift_lines = true,
     .cb_sync_PI_shift_half_frame = true
 };
 
