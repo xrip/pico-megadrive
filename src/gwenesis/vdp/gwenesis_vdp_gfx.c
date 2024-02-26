@@ -29,7 +29,7 @@ __license__ = "GPLv3"
 
 #pragma GCC optimize("Ofast")
 
-extern unsigned char VRAM[];
+extern unsigned char __aligned(4) VRAM[];
 
 extern unsigned short CRAM[];            // CRAM - Palettes
 extern unsigned char SAT_CACHE[]__attribute__((aligned(4)));        // Sprite cache

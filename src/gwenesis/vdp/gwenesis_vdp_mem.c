@@ -30,7 +30,7 @@ __license__ = "GPLv3"
 #include <assert.h>
 #include <graphics.h>
 #include "pico.h"
-#pragma GCC optimize("O2")
+#pragma GCC optimize("Ofast")
 
 #define VDP_MEM_DISABLE_LOGGING 1
 
