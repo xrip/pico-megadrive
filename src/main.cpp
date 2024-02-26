@@ -296,13 +296,13 @@ void menu() {
         if (gamepad1_bits.down || keyboard_bits.down) {
             current_item = (current_item + 1) % MENU_ITEMS_NUMBER;
 
-            if (menu_items[current_item].type == NONE)
+            if (menu_items[current_item].type == EMPTY)
                 current_item++;
         }
         if (gamepad1_bits.up || keyboard_bits.up) {
             current_item = (current_item - 1 + MENU_ITEMS_NUMBER) % MENU_ITEMS_NUMBER;
 
-            if (menu_items[current_item].type == NONE)
+            if (menu_items[current_item].type == EMPTY)
                 current_item--;
         }
 
