@@ -1,3 +1,7 @@
+# v1.0.0
+- speed improvements
+- software composite tv out added
+
 # v0.5.0
 - hdmi / vga / tft / tv composite versions added
 - filebrowser reworked
