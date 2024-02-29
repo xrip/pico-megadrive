@@ -314,6 +314,7 @@ void __time_critical_func() dma_handler_VGA() {
         // Это только для sega
         case GRAPHICSMODE_DEFAULT: {
             const uint32_t addr = y * 320;
+            #pragma GCC unroll 320
             for (int i = 0; i < 320; i+=16) {
                 uint8_t psram_input_buffer_8bit[16];
                 psram_read(&psram_spi, addr + i, psram_input_buffer_8bit, 16);

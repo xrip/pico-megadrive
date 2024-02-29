@@ -667,6 +667,11 @@ void gwenesis_io_get_buttons() {
         menu();
     }
 }
+inline bool init_psram() {
+    psram_spi = psram_spi_init_clkdiv(pio0, -1, 1.4, true);
+    psram_write32(&psram_spi, 0x313373, 0xDEADBEEF);
+    return 0xDEADBEEF == psram_read32(&psram_spi, 0x313373);
+}
 
 /* Renderer loop on Pico's second core */
 void __scratch_x("render") render_core() {
@@ -675,6 +680,14 @@ void __scratch_x("render") render_core() {
     ps2kbd.init_gpio();
     nespad_begin(clock_get_hz(clk_sys) / 1000, NES_GPIO_CLK, NES_GPIO_DATA, NES_GPIO_LAT);
 
+    if (!init_psram()) {
+        while(true) {
+            gpio_put(PICO_DEFAULT_LED_PIN, true);
+            sleep_ms(5);
+            gpio_put(PICO_DEFAULT_LED_PIN, false);
+            sleep_ms(5);
+        }
+    }
     graphics_init();
     const auto buffer = (uint8_t *)SCREEN;
     graphics_set_buffer(buffer, GWENESIS_SCREEN_WIDTH, GWENESIS_SCREEN_HEIGHT);
@@ -712,6 +725,7 @@ void __scratch_x("render") render_core() {
     __unreachable();
 }
 
+psram_spi_inst_t* async_spi_inst;
 
 void __time_critical_func(emulate)() {
     while (!reboot) {
@@ -740,12 +754,13 @@ void __time_critical_func(emulate)() {
             if (drawFrame) {
                 // Interlace mode
                 if (!interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
-                    uint32_t psram_line[320 / 4];
-                    gwenesis_vdp_set_buffer((uint8_t*)psram_line);
-                    const uint32_t addr = scan_line * 320;
+                    uint32_t psram_line[320];
+                    gwenesis_vdp_set_buffer((uint8_t *)psram_line);
+                    const uint32_t addr = scan_line * screen_width;
                     gwenesis_vdp_render_line(scan_line); /* render scan_line */
-#pragma unroll(320)
-                    for (int i = 0; i < 320; i+=4)
+                    for (int i = 0; i < screen_width; i+=4)
+                        // psram_write8_async(&psram_spi, addr+i, psram_line[i]);
+                        // psram_write(&psram_spi, addr+i, psram_line+i, 4);
                          psram_write32(&psram_spi, addr+i, psram_line[i / 4]);
                 }
             }
@@ -807,11 +822,6 @@ void __time_critical_func(emulate)() {
     reboot = false;
 }
 
-inline bool init_psram() {
-    psram_spi = psram_spi_init_clkdiv(pio0, -1, 1.4, true);
-    psram_write32(&psram_spi, 0x313373, 0xDEADBEEF);
-    return 0xDEADBEEF == psram_read32(&psram_spi, 0x313373);
-}
 
 int main() {
     overclock();
@@ -830,15 +840,6 @@ int main() {
         gpio_put(PICO_DEFAULT_LED_PIN, false);
     }
 
-
-    if (!init_psram()) {
-        while(true) {
-            gpio_put(PICO_DEFAULT_LED_PIN, true);
-            sleep_ms(5);
-            gpio_put(PICO_DEFAULT_LED_PIN, false);
-            sleep_ms(5);
-        }
-    }
 
     while (true) {
         graphics_set_mode(TEXTMODE_DEFAULT);
