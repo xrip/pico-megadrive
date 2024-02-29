@@ -1,3 +1,5 @@
+#include <psram_spi.h>
+
 #include "graphics.h"
 #include "hardware/clocks.h"
 #include "stdbool.h"
@@ -69,6 +71,7 @@ static uint16_t* txt_palette_fast = NULL;
 
 enum graphics_mode_t graphics_mode;
 
+extern psram_spi_inst_t psram_spi;
 
 void __time_critical_func() dma_handler_VGA() {
     dma_hw->ints0 = 1u << dma_chan_ctrl;
@@ -309,12 +312,18 @@ void __time_critical_func() dma_handler_VGA() {
             break;
         }
         // Это только для sega
-        case GRAPHICSMODE_DEFAULT:
-            input_buffer_8bit = input_buffer + y * 320;
-            for (int i = width; i--;) {
-                *output_buffer_16bit++ = current_palette[*input_buffer_8bit++];
+        case GRAPHICSMODE_DEFAULT: {
+            const uint32_t addr = y * 320;
+            for (int i = 0; i < 320; i+=16) {
+                uint8_t psram_input_buffer_8bit[16];
+                psram_read(&psram_spi, addr + i, psram_input_buffer_8bit, 16);
+                for (int ii = 0; ii < 16; ii++) {
+                    *output_buffer_16bit++ = current_palette[psram_input_buffer_8bit[ii]];
+                }
             }
+
             break;
+        }
         case VGA_320x200x256x4:
             input_buffer_8bit = input_buffer + y * (width / 4);
             for (int x = width / 2; x--;) {

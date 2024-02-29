@@ -2,6 +2,7 @@
 
 /* Standard library includes */
 
+#include <psram_spi.h>
 #include <pico/stdlib.h>
 #include <pico/runtime.h>
 #include <hardware/clocks.h>
@@ -36,6 +37,7 @@ static FATFS fs;
 
 semaphore vga_start_semaphore;
 static uint8_t SCREEN[240][320];
+psram_spi_inst_t psram_spi;
 
 enum input_device {
     KEYBOARD,
@@ -674,7 +676,6 @@ void __scratch_x("render") render_core() {
     nespad_begin(clock_get_hz(clk_sys) / 1000, NES_GPIO_CLK, NES_GPIO_DATA, NES_GPIO_LAT);
 
     graphics_init();
-
     const auto buffer = (uint8_t *)SCREEN;
     graphics_set_buffer(buffer, GWENESIS_SCREEN_WIDTH, GWENESIS_SCREEN_HEIGHT);
     graphics_set_textbuffer(buffer);
@@ -739,8 +740,13 @@ void __time_critical_func(emulate)() {
             if (drawFrame) {
                 // Interlace mode
                 if (!interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
-                    gwenesis_vdp_set_buffer(&SCREEN[scan_line][0]);
+                    uint32_t psram_line[320 / 4];
+                    gwenesis_vdp_set_buffer((uint8_t*)psram_line);
+                    const uint32_t addr = scan_line * 320;
                     gwenesis_vdp_render_line(scan_line); /* render scan_line */
+#pragma unroll(320)
+                    for (int i = 0; i < 320; i+=4)
+                         psram_write32(&psram_spi, addr+i, psram_line[i / 4]);
                 }
             }
 
@@ -801,6 +807,12 @@ void __time_critical_func(emulate)() {
     reboot = false;
 }
 
+inline bool init_psram() {
+    psram_spi = psram_spi_init_clkdiv(pio0, -1, 1.4, true);
+    psram_write32(&psram_spi, 0x313373, 0xDEADBEEF);
+    return 0xDEADBEEF == psram_read32(&psram_spi, 0x313373);
+}
+
 int main() {
     overclock();
 
@@ -818,9 +830,19 @@ int main() {
         gpio_put(PICO_DEFAULT_LED_PIN, false);
     }
 
+
+    if (!init_psram()) {
+        while(true) {
+            gpio_put(PICO_DEFAULT_LED_PIN, true);
+            sleep_ms(5);
+            gpio_put(PICO_DEFAULT_LED_PIN, false);
+            sleep_ms(5);
+        }
+    }
+
     while (true) {
         graphics_set_mode(TEXTMODE_DEFAULT);
-        filebrowser(HOME_DIR, "bin,md,gen");
+        filebrowser(HOME_DIR, "bin,md,gen,smd");
         graphics_set_mode(GRAPHICSMODE_DEFAULT);
 
         load_cartridge(rom);
