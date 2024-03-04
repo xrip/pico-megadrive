@@ -19,6 +19,8 @@ __license__ = "GPLv3"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <pico/platform.h>
+
 #include "../cpus/M68K/m68k.h"
 #include "gwenesis_vdp.h"
 #include "../io/gwenesis_io.h"
@@ -96,7 +98,7 @@ void vdpg_log(const char *subs, const char *fmt, ...) {
   printf("\n");
 }
 #else
-	#define vdpg_log(...)  do {} while(0)
+	#define vdpg_log(...)
 #endif
 /******************************************************************************
  *
@@ -408,9 +410,9 @@ void draw_pattern_sprite(uint8_t *scr, uint16_t name, int paty) {
 
   // Vertical flip ?
   if (name & 0x1000)
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
+    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + __fast_mul((7 - paty), 4)); //) pat_addr;
   else
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + __fast_mul(paty, 4));
 
   // Horizontal flip ?
   if (name & 0x0800)
@@ -442,9 +444,9 @@ void draw_pattern_sprite_over_planes(uint8_t *scr, uint16_t name, int paty) {
 
   // Vertical flip ?
   if (name & 0x1000)
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
+    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + __fast_mul((7 - paty) , 4)); //) pat_addr;
   else
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) +__fast_mul (paty , 4));
 
   // Horizontal flip ?
   if (name & 0x0800)
@@ -466,9 +468,9 @@ void draw_pattern_planeB(uint8_t *scr, uint16_t name, int paty) {
 
   // Vertical flip ?
   if (name & 0x1000)
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
+    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + __fast_mul((7 - paty) , 4)); //) pat_addr;
   else
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + __fast_mul(paty , 4));
 
 //  if ((*(unsigned int *)pattern) == 0 ) return;
  // uint8_t *pattern = VRAM + ((name << 5) & 0xFFFF); //) pat_addr;
@@ -505,9 +507,9 @@ void draw_pattern_planeA(uint8_t *scr, uint16_t name, int paty) {
 
   // Vertical flip ?
   if (name & 0x1000)
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + ((7 - paty) * 4)); //) pat_addr;
+    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + __fast_mul((7 - paty) , 4)); //) pat_addr;
   else
-    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + (paty * 4));
+    pattern = *(unsigned int *)(VRAM + ((name & 0x07FF) << 5) + __fast_mul(paty , 4));
 
   // Horizontal flip ?
   if (name & 0x0800)
@@ -589,7 +591,7 @@ void draw_line_b(int line)
    // unsigned int nt = ntaddr + row * (2 * ntwidth);
     unsigned int nt = ntaddr + row * ntwidth_x2;
 
-    draw_pattern_planeB(scr, FETCH16VRAM(nt + col * 2), paty);
+    draw_pattern_planeB(scr, FETCH16VRAM(nt + __fast_mul(col , 2)), paty);
     col = (col + 1) & ntw_mask;
     scr += 8;
     numcell++;
@@ -664,7 +666,7 @@ void draw_line_aw(int line) {
    // unsigned int nt = ntaddr + row * (2 * ntwidth);
     unsigned int nt = ntaddr + row * ntwidth_x2;
 
-    draw_pattern_planeA(pos, FETCH16VRAM(nt + col * 2), paty);
+    draw_pattern_planeA(pos, FETCH16VRAM(nt + __fast_mul(col , 2)), paty);
 
     col = (col + 1) & ntw_mask;
     pos += 8;
@@ -722,8 +724,8 @@ void draw_sprites_over_planes(int line)
     int sidx = 0, num_sprites = 0, num_pixels = 0;
     for (int i = 0; (i < SPRITE_TABLE_SIZE) && sidx < (SPRITE_TABLE_SIZE); ++i)
     {
-        uint8_t *table = start_table + sidx*8;
-        uint8_t *cache = SAT_CACHE + sidx*8;
+        uint8_t *table = start_table + __fast_mul(sidx,8);
+        uint8_t *cache = SAT_CACHE + __fast_mul(sidx,8);
         //uint8_t *cache = start_table + sidx*8;
         
 
@@ -741,7 +743,7 @@ void draw_sprites_over_planes(int line)
         int sw = BITS(table[2], 2, 2) + 1;
 
         sy -= 128;
-        if ((line >= sy) && (line < sy+sh*8))
+        if ((line >= sy) && (line < sy+__fast_mul(sh,8)))
         {
             // Sprite masking: a sprite on column 0 masks
             // any lower-priority sprite, but with the following conditions
@@ -765,7 +767,7 @@ void draw_sprites_over_planes(int line)
                 row = sh - row - 1;
 
             sx -= 128;
-            if ((sx > (-sw * 8)) && (sx < screen_width) && !masking) {
+            if ((sx > (__fast_mul(-sw, 8))) && (sx < screen_width) && !masking) {
 
               name += row;
 
@@ -773,7 +775,7 @@ void draw_sprites_over_planes(int line)
                 name += sh * (sw - 1);
                 for (int p = 0; (p < sw) && (num_pixels < MAX_PIXELS_PER_LINE); p++) {
 
-                  draw_pattern_sprite_over_planes(scr + sx + p * 8, name, paty);
+                  draw_pattern_sprite_over_planes(scr + sx + __fast_mul(p,8), name, paty);
                   name -= sh;
                   num_pixels += 8;
 
@@ -781,7 +783,7 @@ void draw_sprites_over_planes(int line)
               } else {
                 for (int p = 0; (p < sw) && (num_pixels < MAX_PIXELS_PER_LINE); p++) {
 
-                  draw_pattern_sprite_over_planes(scr + sx + p * 8, name, paty);
+                  draw_pattern_sprite_over_planes(scr + sx + __fast_mul(p,8), name, paty);
                   name += sh;
                   num_pixels += 8;
 
@@ -830,8 +832,8 @@ void draw_sprites(int line)
   bool masking = false, one_sprite_nonzero = false; // overdraw = false;
   int sidx = 0, num_sprites = 0, num_pixels = 0;
   for (int i = 0; i < SPRITE_TABLE_SIZE && sidx < SPRITE_TABLE_SIZE; ++i) {
-    uint8_t *table = start_table + sidx * 8;
-    uint8_t *cache = start_table + sidx * 8;
+    uint8_t *table = start_table + __fast_mul(sidx, 8);
+    uint8_t *cache = start_table + __fast_mul(sidx, 8);
 
     //uint8_t *cache = SAT_CACHE + sidx * 8;
 
@@ -848,7 +850,7 @@ void draw_sprites(int line)
     int sw = BITS(table[2], 2, 2) + 1;
 
     sy -= 128;
-    if (line >= sy && line < sy + sh * 8) {
+    if (line >= sy && line < sy + __fast_mul(sh,8)) {
       // Sprite masking: a sprite on column 0 masks
       // any lower-priority sprite, but with the following conditions
       //   * it only works from the second visible sprite on each line
@@ -869,7 +871,7 @@ void draw_sprites(int line)
         row = sh - row - 1;
 
       sx -= 128;
-      if (sx > -sw * 8 && sx < screen_width && !masking) {
+      if (sx > -__fast_mul(sw, 8) && sx < screen_width && !masking) {
 
         name += row;
 
@@ -877,20 +879,20 @@ void draw_sprites(int line)
           name += sh * (sw - 1);
           for (int p = 0; p < sw && num_pixels < MAX_PIXELS_PER_LINE; p++) {
 
-            draw_pattern_sprite(scr + sx + p * 8, name, paty);
+            draw_pattern_sprite(scr + sx + __fast_mul(p, 8), name, paty);
             name -= sh;
             num_pixels += 8;
           }
         } else {
           for (int p = 0; p < sw && num_pixels < MAX_PIXELS_PER_LINE; p++) {
 
-            draw_pattern_sprite(scr + sx + p * 8, name, paty);
+            draw_pattern_sprite(scr + sx + __fast_mul(p,8), name, paty);
             name += sh;
             num_pixels += 8;
           }
         }
       } else
-        num_pixels += sw * 8;
+        num_pixels += __fast_mul(sw, 8);
 
       if (num_pixels >= MAX_PIXELS_PER_LINE) {
         sprite_overflow = line;
@@ -922,8 +924,8 @@ void gwenesis_vdp_render_config()
 
     int ntwidth = BITS(gwenesis_vdp_regs[16], 0, 2);
     int ntheight = BITS(gwenesis_vdp_regs[16], 4, 2);
-    ntwidth = (ntwidth + 1) * 32;
-    ntheight = (ntheight + 1) * 32;
+    ntwidth = __fast_mul((ntwidth + 1) , 32);
+    ntheight = __fast_mul((ntheight + 1) , 32);
     ntw_mask = ntwidth - 1;
     nth_mask = ntheight - 1;
     ntwidth_x2= ntwidth *2;
@@ -978,6 +980,7 @@ void gwenesis_vdp_render_config()
 
 void gwenesis_vdp_render_line(int line)
 {
+  uint8_t * line_buffer = &screen_buffer_line[__fast_mul(line, GWENESIS_SCREEN_WIDTH)];
   mode_h40 = REG12_MODE_H40;
   //mode_pal = REG1_PAL;
 
@@ -995,13 +998,13 @@ void gwenesis_vdp_render_line(int line)
 
     // Disable display >> black SCREEN
   if (REG0_DISABLE_DISPLAY){
-        memset(screen_buffer_line, 0, GWENESIS_SCREEN_WIDTH);
+        memset(line_buffer, 0, GWENESIS_SCREEN_WIDTH);
     return;
   }
 
   // Display is not enabled. fill with background colour
   if (REG1_DISP_ENABLED == 0) {
-        memset(screen_buffer_line, 0, GWENESIS_SCREEN_WIDTH);
+        memset(line_buffer, 0, GWENESIS_SCREEN_WIDTH);
     return;
   }
 
@@ -1027,26 +1030,26 @@ void gwenesis_vdp_render_line(int line)
           switch (sprite & 0x3F) {
           // Palette=3, Sprite=14 :> draw plane, force highlight
           case 0x3E:
-                        screen_buffer_line[x] = 0x8410 | plane >> 1;
+                        line_buffer[x] = 0x8410 | plane >> 1;
             break;
           // Palette=3, Sprite=15 :> draw plane, force shadow
           case 0x3F:
-                        screen_buffer_line[x] = plane >> 1;
+                        line_buffer[x] = plane >> 1;
             break;
           // draw sprite, normal
           default:
-                        screen_buffer_line[x] = sprite;
+                        line_buffer[x] = sprite;
             break;
           }
         } else {
-                screen_buffer_line[x] = plane;
+                line_buffer[x] = plane;
         }
       }
 
       /* Normal mode*/
     } else {
         draw_sprites_over_planes(line);
-        memcpy(screen_buffer_line, pb, GWENESIS_SCREEN_WIDTH);
+        memcpy(line_buffer, pb, GWENESIS_SCREEN_WIDTH);
     }
 }
 
