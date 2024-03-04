@@ -713,6 +713,7 @@ void __scratch_x("render") render_core() {
 
 
 void __time_critical_func(emulate)() {
+    gwenesis_vdp_set_buffer((uint8_t*)SCREEN);
     while (!reboot) {
         /* Eumulator loop */
         int hint_counter = gwenesis_vdp_regs[10];
@@ -736,12 +737,9 @@ void __time_critical_func(emulate)() {
             m68k_run(system_clock + VDP_CYCLES_PER_LINE);
 
             /* Video */
-            if (drawFrame) {
-                // Interlace mode
-                if (!interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
-                    gwenesis_vdp_set_buffer(&SCREEN[scan_line][0]);
+            // Interlace mode
+            if (drawFrame && !interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
                     gwenesis_vdp_render_line(scan_line); /* render scan_line */
-                }
             }
 
             // On these lines, the line counter interrupt is reloaded
@@ -769,7 +767,7 @@ void __time_critical_func(emulate)() {
                 }
             }
 
-            if (scan_line == screen_height + 1) {
+            if (!is_pal && scan_line == screen_height + 1) {
                 // FRAMESKIP every 3rd frame
                 if (frameskip && frame % 3 == 0) {
                     drawFrame = 0;
@@ -782,7 +780,9 @@ void __time_critical_func(emulate)() {
                 if (limit_fps) {
                     frame_cnt++;
                     if (frame_cnt == (is_pal ? 5 : 6)) {
-                        while (time_us_64() - frame_timer_start < (is_pal ? 20000 : 16666) * 6); // 60 Hz
+                        while (time_us_64() - frame_timer_start < (is_pal ? 20000 * 5 : 16666 * 6)) {
+                            busy_wait_us(1);
+                        }; // 60 Hz
                         frame_timer_start = time_us_64();
                         frame_cnt = 0;
                     }
@@ -820,7 +820,7 @@ int main() {
 
     while (true) {
         graphics_set_mode(TEXTMODE_DEFAULT);
-        filebrowser(HOME_DIR, "bin,md,gen");
+        filebrowser(HOME_DIR, "bin,md,gen,smd");
         graphics_set_mode(GRAPHICSMODE_DEFAULT);
 
         load_cartridge(rom);
