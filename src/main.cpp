@@ -781,7 +781,7 @@ void __time_critical_func(emulate)() {
                     frame_cnt++;
                     if (frame_cnt == (is_pal ? 5 : 6)) {
                         while (time_us_64() - frame_timer_start < (is_pal ? 20000 * 5 : 16666 * 6)) {
-                            busy_wait_us(1);
+                            busy_wait_at_least_cycles(10);
                         }; // 60 Hz
                         frame_timer_start = time_us_64();
                         frame_cnt = 0;
