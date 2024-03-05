@@ -312,7 +312,7 @@ void __time_critical_func() dma_handler_VGA() {
         case GRAPHICSMODE_DEFAULT:
             input_buffer_8bit = input_buffer + y * 320;
             for (int i = width; i--;) {
-                *output_buffer_16bit++ = current_palette[*input_buffer_8bit++];
+                *output_buffer_16bit++ = current_palette[*input_buffer_8bit++ % 64];
             }
             break;
         case VGA_320x200x256x4:

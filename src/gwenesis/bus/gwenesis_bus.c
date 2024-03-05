@@ -50,7 +50,7 @@ void bus_log(const char *subs, const char *fmt, ...) {
   printf("\n");
 }
 #else
-	#define bus_log(...)  do {} while(0)
+	#define bus_log(...)
 #endif
 
 // Setup M68k memories ROM & RAM

@@ -123,7 +123,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_pwm
         hardware_flash
 
-		tinyusb_host tinyusb_board
+		tinyusb_host
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
