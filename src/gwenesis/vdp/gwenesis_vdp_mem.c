@@ -115,12 +115,6 @@ extern bool sprite_collision;
  *  Clear all volatile memory
  *
  ******************************************************************************/
-#if TFT
-#define RGB565_TO_RGB888(rgb565) (rgb565)
-#else
-#define RGB565_TO_RGB888(rgb565) ((((rgb565) & 0xF800) << 8) | (((rgb565) & 0x07E0) << 5) | (((rgb565) & 0x001F) << 3))
-#endif
-
 int m68k_irq_acked(int irq) {
 
   /* VINT has higher priority (Fatal Rewind) */
@@ -438,7 +432,7 @@ void gwenesis_vdp_dma_fill(unsigned short value)
                 uint8_t addr = (address_reg & 0x7f) >> 1;
                 CRAM[addr] = fifo[3];
 
-                graphics_set_palette(addr, RGB565_TO_RGB888((fifo[3] & 0xe00) >> 7  | (fifo[3] & 0x0e0) << 3 | (fifo[3] & 0x00e) << 12));
+                graphics_set_palette(addr, RGB888(CRAM_R(fifo[3]), CRAM_G(fifo[3]), CRAM_B(fifo[3])));
 
       address_reg += REG15_DMA_INCREMENT;
       src_addr_low++;
@@ -525,7 +519,7 @@ void gwenesis_vdp_dma_m68k()
                     uint8_t addr = (address_reg & 0x7f) >> 1;
                     CRAM[addr] = value;
 
-                    graphics_set_palette(addr, RGB565_TO_RGB888((value & 0xe00) >> 7  | (value & 0x0e0) << 3 | (value & 0x00e) << 12));
+                    graphics_set_palette(addr, RGB888(CRAM_R(value), CRAM_G(value), CRAM_B(value)));
 
           address_reg += REG15_DMA_INCREMENT;
           src_addr += 2;
@@ -573,7 +567,7 @@ void gwenesis_vdp_dma_m68k()
                     uint8_t addr = (address_reg & 0x7f) >> 1;
                     CRAM[addr] = value;
 
-                    graphics_set_palette(addr, RGB565_TO_RGB888((value & 0xe00) >> 7  | (value & 0x0e0) << 3 | (value & 0x00e) << 12));
+                    graphics_set_palette(addr, RGB888(CRAM_R(value), CRAM_G(value), CRAM_B(value)));
 
           address_reg += REG15_DMA_INCREMENT;
           src_addr += 2;
@@ -804,7 +798,7 @@ void gwenesis_vdp_write_data_port_16(unsigned int value)
             uint8_t addr = (address_reg & 0x7f) >> 1;
             CRAM[addr] = value;
 
-            graphics_set_palette(addr, RGB565_TO_RGB888((value & 0xe00) >> 7  | (value & 0x0e0) << 3 | (value & 0x00e) << 12));
+            graphics_set_palette(addr, RGB888(CRAM_R(value), CRAM_G(value), CRAM_B(value)));
 
             address_reg += REG15_DMA_INCREMENT;
             address_reg &= 0xFFFF;
