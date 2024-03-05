@@ -32,7 +32,7 @@ typedef struct tv_out_mode_t {
 //параметры по умолчанию
 static tv_out_mode_t tv_out_mode = {
     .tv_system = g_TV_OUT_NTSC,
-    .N_lines = _525_lines,
+    .N_lines = _524_lines,
     .mode_bpp = GRAPHICSMODE_DEFAULT,
     .c_freq = _3579545,
     .color_index = 1.0, //0-1
@@ -1023,6 +1023,7 @@ static bool __time_critical_func(video_timer_callbackTV)(repeating_timer_t* rt) 
                             output_buffer8 += buffer_shift;
 
                             int x = 0;
+#pragma GCC unroll 64
                             for (int i = 0; i < video_mode.img_W - d_end; i++) {
                                 *output_buffer8++ = c_4[i % 4];
                                 next_ibuf -= di;
@@ -1030,7 +1031,7 @@ static bool __time_critical_func(video_timer_callbackTV)(repeating_timer_t* rt) 
                                     x++;
                                     if (x > graphics_buffer.shift_x && x < graphics_buffer.shift_x + graphics_buffer.
                                         width) {
-                                        color = *input_buffer8++;
+                                        color = *input_buffer8++ % 64;
                                     }
                                     else {
                                         color = 200;

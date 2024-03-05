@@ -51,8 +51,7 @@ static uint8_t *screen_buffer_line = 0;
     // wasting time and code in clipping. The maximum object is a 4x4 sprite,
     // so 32 pixels (on both side) is enough.
 
-enum { PIX_OVERFLOW = 32 };
-
+#define PIX_OVERFLOW (32)
 static uint8_t render_buffer[GWENESIS_SCREEN_WIDTH + PIX_OVERFLOW*2];
 static uint8_t sprite_buffer[GWENESIS_SCREEN_WIDTH + PIX_OVERFLOW*2];
 
@@ -722,6 +721,7 @@ void draw_sprites_over_planes(int line)
 
     bool masking = false, one_sprite_nonzero = false; // overdraw = false;
     int sidx = 0, num_sprites = 0, num_pixels = 0;
+
     for (int i = 0; (i < SPRITE_TABLE_SIZE) && sidx < (SPRITE_TABLE_SIZE); ++i)
     {
         uint8_t *table = start_table + __fast_mul(sidx,8);
@@ -773,6 +773,7 @@ void draw_sprites_over_planes(int line)
 
               if (isfliph) {
                 name += sh * (sw - 1);
+
                 for (int p = 0; (p < sw) && (num_pixels < MAX_PIXELS_PER_LINE); p++) {
 
                   draw_pattern_sprite_over_planes(scr + sx + __fast_mul(p,8), name, paty);
@@ -781,6 +782,7 @@ void draw_sprites_over_planes(int line)
 
                 }
               } else {
+
                 for (int p = 0; (p < sw) && (num_pixels < MAX_PIXELS_PER_LINE); p++) {
 
                   draw_pattern_sprite_over_planes(scr + sx + __fast_mul(p,8), name, paty);
