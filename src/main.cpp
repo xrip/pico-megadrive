@@ -717,6 +717,8 @@ void __time_critical_func(emulate)() {
         lines_per_frame = is_pal ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC;
 
         // graphics_set_buffer(buffer, screen_width, screen_height);
+        // TODO: move to separate function graphics_set_dimensions ?
+        graphics_set_buffer(&SCREEN[0][0], screen_width, screen_height);
         graphics_set_offset(screen_width != 320 ? 32 : 0, screen_height != 240 ? 8 : 0);
         gwenesis_vdp_render_config();
 

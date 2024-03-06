@@ -982,7 +982,7 @@ void gwenesis_vdp_render_config()
 
 void gwenesis_vdp_render_line(int line)
 {
-  uint8_t * line_buffer = &screen_buffer_line[__fast_mul(line, GWENESIS_SCREEN_WIDTH)];
+  uint8_t * line_buffer = &screen_buffer_line[__fast_mul(line, screen_width)];
   mode_h40 = REG12_MODE_H40;
   //mode_pal = REG1_PAL;
 
@@ -1000,13 +1000,13 @@ void gwenesis_vdp_render_line(int line)
 
     // Disable display >> black SCREEN
   if (REG0_DISABLE_DISPLAY){
-        memset(line_buffer, 0, GWENESIS_SCREEN_WIDTH);
+        memset(line_buffer, 0, screen_width);
     return;
   }
 
   // Display is not enabled. fill with background colour
   if (REG1_DISP_ENABLED == 0) {
-        memset(line_buffer, 0, GWENESIS_SCREEN_WIDTH);
+        memset(line_buffer, 0, screen_width);
     return;
   }
 
@@ -1051,7 +1051,7 @@ void gwenesis_vdp_render_line(int line)
       /* Normal mode*/
     } else {
         draw_sprites_over_planes(line);
-        memcpy(line_buffer, pb, GWENESIS_SCREEN_WIDTH);
+        memcpy(line_buffer, pb, screen_width);
     }
 }
 
