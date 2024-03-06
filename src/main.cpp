@@ -27,9 +27,9 @@ extern "C" {
 
 
 #define HOME_DIR "\\SEGA"
-
-#define FLASH_TARGET_OFFSET (900 * 1024)
-static constexpr uintptr_t rom = XIP_BASE + FLASH_TARGET_OFFSET;
+extern char __flash_binary_end;
+#define FLASH_TARGET_OFFSET (((((uintptr_t)&__flash_binary_end - XIP_BASE) / FLASH_SECTOR_SIZE) + 1) * FLASH_SECTOR_SIZE)
+static const uintptr_t rom = XIP_BASE + FLASH_TARGET_OFFSET;
 char __uninitialized_ram(filename[256]);
 
 static FATFS fs;
@@ -179,7 +179,7 @@ typedef struct __attribute__((__packed__)) {
 } MenuItem;
 
 int save_slot = 0;
-uint16_t frequencies[] = { 378, 396, 404, 408, 412, 416, 420, 424, 432 };
+uint16_t frequencies[] = {378, 396, 404, 408, 412, 416, 420, 424, 432};
 uint8_t frequency_index = 0;
 
 bool overclock() {
@@ -200,11 +200,11 @@ bool save() {
 const MenuItem menu_items[] = {
     //{"Player 1: %s",        ARRAY, &player_1_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
     //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
-    { "Frameskip: %s", ARRAY, &frameskip, nullptr, 1, { "NO ", "YES" } },
-    { "Interlace mode: %s", ARRAY, &interlace, nullptr, 1, { "NO ", "YES" } },
+    {"Frameskip: %s", ARRAY, &frameskip, nullptr, 1, {"NO ", "YES"}},
+    {"Interlace mode: %s", ARRAY, &interlace, nullptr, 1, {"NO ", "YES"}},
     {
         "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
-        { "378", "396", "404", "408", "412", "416", "420", "424", "432" }
+        {"378", "396", "404", "408", "412", "416", "420", "424", "432"}
     },
     // {},
     // { "Save state: %i", INT, &save_slot, &save, 5 },
@@ -212,9 +212,9 @@ const MenuItem menu_items[] = {
     // { "" },
     // { "Flash line: %s", ARRAY, &flash_line, nullptr, 1, { "NO ", "YES" } },
     // { "Flash frame: %s", ARRAY, &flash_frame, nullptr, 1, { "NO ", "YES" } },
-    { "" },
-    { "Reset to ROM select", ROM_SELECT },
-    { "Return to game", RETURN }
+    {""},
+    {"Reset to ROM select", ROM_SELECT},
+    {"Return to game", RETURN}
 };
 
 #define MENU_ITEMS_NUMBER count_of(menu_items)
@@ -246,7 +246,7 @@ void menu() {
                     case INT:
                     case ARRAY:
                         if (item->max_value != 0) {
-                            auto* value = (uint8_t *)item->value;
+                            auto* value = (uint8_t *) item->value;
                             if ((gamepad1_bits.right || keyboard_bits.right) && *value < item->max_value) {
                                 (*value)++;
                             }
@@ -277,10 +277,10 @@ void menu() {
             static char result[TEXTMODE_COLS];
             switch (item->type) {
                 case INT:
-                    snprintf(result, TEXTMODE_COLS, item->text, *(uint8_t *)item->value);
+                    snprintf(result, TEXTMODE_COLS, item->text, *(uint8_t *) item->value);
                     break;
                 case ARRAY:
-                    snprintf(result, TEXTMODE_COLS, item->text, item->value_list[*(uint8_t *)item->value]);
+                    snprintf(result, TEXTMODE_COLS, item->text, item->value_list[*(uint8_t *) item->value]);
                     break;
                 case TEXT:
                     snprintf(result, TEXTMODE_COLS, item->text, item->value);
@@ -320,11 +320,11 @@ typedef struct __attribute__((__packed__)) {
 } file_item_t;
 
 constexpr int max_files = 600;
-file_item_t* fileItems = (file_item_t *)(&SCREEN[0][0] + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
+file_item_t* fileItems = (file_item_t *) (&SCREEN[0][0] + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
 
 int compareFileItems(const void* a, const void* b) {
-    const auto* itemA = (file_item_t *)a;
-    const auto* itemB = (file_item_t *)b;
+    const auto* itemA = (file_item_t *) a;
+    const auto* itemB = (file_item_t *) b;
     // Directories come first
     if (itemA->is_directory && !itemB->is_directory)
         return -1;
@@ -406,8 +406,7 @@ bool filebrowser_loadfile(const char pathname[256]) {
 
                 flash_target_offset += FLASH_PAGE_SIZE;
             }
-        }
-        while (bytes_read != 0);
+        } while (bytes_read != 0);
 
         gpio_put(PICO_DEFAULT_LED_PIN, true);
     }
@@ -511,8 +510,7 @@ void filebrowser(const char pathname[256], const char executables[11]) {
                 if (offset + (current_item + 1) < total_files) {
                     if (current_item + 1 < per_page) {
                         current_item++;
-                    }
-                    else {
+                    } else {
                         offset++;
                     }
                 }
@@ -521,8 +519,7 @@ void filebrowser(const char pathname[256], const char executables[11]) {
             if (nespad_state & DPAD_UP || keyboard_bits.up) {
                 if (current_item > 0) {
                     current_item--;
-                }
-                else if (offset > 0) {
+                } else if (offset > 0) {
                     offset--;
                 }
             }
@@ -537,8 +534,7 @@ void filebrowser(const char pathname[256], const char executables[11]) {
             if (nespad_state & DPAD_LEFT || keyboard_bits.left) {
                 if (offset > per_page) {
                     offset -= per_page;
-                }
-                else {
+                } else {
                     offset = 0;
                     current_item = 0;
                 }
@@ -554,8 +550,7 @@ void filebrowser(const char pathname[256], const char executables[11]) {
                             const size_t length = lastBackslash - basepath;
                             basepath[length] = '\0';
                         }
-                    }
-                    else {
+                    } else {
                         sprintf(basepath, "%s\\%s", basepath, file_at_cursor.filename);
                     }
                     debounce = false;
@@ -598,8 +593,7 @@ void filebrowser(const char pathname[256], const char executables[11]) {
                     memset(tmp, ' ', TEXTMODE_COLS - 2);
                     tmp[TEXTMODE_COLS - 2] = '\0';
                     memcpy(&tmp, item.filename, len < TEXTMODE_COLS - 2 ? len : TEXTMODE_COLS - 2);
-                }
-                else {
+                } else {
                     memset(tmp, ' ', TEXTMODE_COLS - 2);
                 }
                 draw_text(tmp, 1, i + 1, color, bg_color);
@@ -675,7 +669,7 @@ void __scratch_x("render") render_core() {
 
     graphics_init();
 
-    const auto buffer = (uint8_t *)SCREEN;
+    const auto buffer = (uint8_t *) SCREEN;
     graphics_set_buffer(buffer, GWENESIS_SCREEN_WIDTH, GWENESIS_SCREEN_HEIGHT);
     graphics_set_textbuffer(buffer);
     graphics_set_bgcolor(0x000000);
@@ -690,7 +684,6 @@ void __scratch_x("render") render_core() {
     uint64_t last_frame_tick = tick;
 
     while (true) {
-
         if (tick >= last_frame_tick + frame_tick) {
 #ifdef TFT
             refresh_lcd();
@@ -713,7 +706,7 @@ void __scratch_x("render") render_core() {
 
 
 void __time_critical_func(emulate)() {
-    gwenesis_vdp_set_buffer((uint8_t*)SCREEN);
+    gwenesis_vdp_set_buffer((uint8_t *) SCREEN);
     while (!reboot) {
         /* Eumulator loop */
         int hint_counter = gwenesis_vdp_regs[10];
@@ -739,7 +732,7 @@ void __time_critical_func(emulate)() {
             /* Video */
             // Interlace mode
             if (drawFrame && !interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
-                    gwenesis_vdp_render_line(scan_line); /* render scan_line */
+                gwenesis_vdp_render_line(scan_line); /* render scan_line */
             }
 
             // On these lines, the line counter interrupt is reloaded
@@ -771,8 +764,7 @@ void __time_critical_func(emulate)() {
                 // FRAMESKIP every 3rd frame
                 if (frameskip && frame % 3 == 0) {
                     drawFrame = 0;
-                }
-                else {
+                } else {
                     drawFrame = 1;
                 }
 
