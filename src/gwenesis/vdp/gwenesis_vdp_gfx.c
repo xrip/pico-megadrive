@@ -685,7 +685,7 @@ void draw_line_aw(int line) {
   int wdwidth_x2 = (screen_width == 320 ? 128 : 64);
 
   unsigned int nt = base_w + row * wdwidth_x2 + Window_first / 4;
-
+#pragma GCC unroll(64)
   for (int i = Window_first / 8; i < Window_last / 8; ++i) {
     draw_pattern_planeA(end, FETCH16VRAM(nt), paty);
     nt += 2;
@@ -833,6 +833,8 @@ void draw_sprites(int line)
 
   bool masking = false, one_sprite_nonzero = false; // overdraw = false;
   int sidx = 0, num_sprites = 0, num_pixels = 0;
+
+
   for (int i = 0; i < SPRITE_TABLE_SIZE && sidx < SPRITE_TABLE_SIZE; ++i) {
     uint8_t *table = start_table + __fast_mul(sidx, 8);
     uint8_t *cache = start_table + __fast_mul(sidx, 8);
@@ -1023,7 +1025,7 @@ void gwenesis_vdp_render_line(int line)
     /* Mode Highlight/shadow is enabled */
     if (MODE_SHI) {
         draw_sprites(line);
-
+#pragma GCC unroll(640)
       for (int x = 0; x < screen_width; x++) {
         uint8_t plane = pb[x];
         uint8_t sprite = ps[x];
