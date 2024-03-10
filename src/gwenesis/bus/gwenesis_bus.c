@@ -26,6 +26,9 @@ __license__ = "GPLv3"
 
 #include "../sound/z80inst.h"
 #include "gwenesis_bus.h"
+
+#include <gwenesis/sound/gwenesis_sn76489.h>
+
 #include "../io/gwenesis_io.h"
 #include "../vdp/gwenesis_vdp.h"
 #include "../savestate/gwenesis_savestate.h"
@@ -115,7 +118,7 @@ void power_on() {
 //     gwenesis_SN76489_Init(3579545, GWENESIS_AUDIO_BUFFER_LENGTH_NTSC*60,AUDIO_FREQ_DIVISOR);
 //   }
   
-
+  gwenesis_SN76489_Init(3579545, 888*60,AUDIO_FREQ_DIVISOR);
 }
 
 /******************************************************************************
@@ -131,6 +134,7 @@ void reset_emulation() {
   // Send a reset pulse to YM2612 chip
   // Send a reset pulse to SEGA 315-5313 chip
   gwenesis_vdp_reset();
+  gwenesis_SN76489_Reset();
 }
 
 /******************************************************************************
@@ -459,6 +463,7 @@ static inline void gwenesis_bus_write_memory_8(unsigned int address,
 
   case Z80_SN76489_ADDR:
     bus_log(__FUNCTION__,"CPUZ80FM8  ,m68kclk= %d", m68k_cycles_master());
+    gwenesis_SN76489_Write( value & 0Xff, m68k_cycles_master());
     return;
 
   case Z80_BANK_ADDR:
@@ -517,6 +522,7 @@ static inline void gwenesis_bus_write_memory_16(unsigned int address,
 
   case Z80_SN76489_ADDR:
     bus_log(__FUNCTION__,"CZSN16 ,mclk=%d", m68k_cycles_master());
+    gwenesis_SN76489_Write(value >> 8,m68k_cycles_master() );
     return;
 
   default:

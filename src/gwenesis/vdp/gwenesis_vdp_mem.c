@@ -29,6 +29,8 @@ __license__ = "GPLv3"
 
 #include <assert.h>
 #include <graphics.h>
+#include <gwenesis/sound/gwenesis_sn76489.h>
+
 #include "pico.h"
 #pragma GCC optimize("Ofast")
 
@@ -922,7 +924,7 @@ void gwenesis_vdp_write_memory_16(unsigned int address, unsigned int value) {
   }
   if (address < 0x18) { // PSG 8 bits write
       vdpm_log(__FUNCTION__,"PSG sclk=%d,mclk=%d", system_clock,  m68k_cycles_master());
-
+      gwenesis_SN76489_Write(value, m68k_cycles_master());
     return;
   }
   // UNHANDLED

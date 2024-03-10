@@ -105,6 +105,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${BUILD_NAME}")
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
 		graphics
+		audio
 
 		nespad
 		sdcard

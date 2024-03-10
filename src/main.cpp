@@ -2,10 +2,13 @@
 
 /* Standard library includes */
 
+
 #include <pico/stdlib.h>
 #include <pico/runtime.h>
 #include <hardware/clocks.h>
 #include <pico/multicore.h>
+
+#include "audio.h"
 #include "hardware/vreg.h"
 #include "hardware/flash.h"
 
@@ -17,6 +20,7 @@ extern "C" {
 #include "gwenesis/io/gwenesis_io.h"
 #include "gwenesis/vdp/gwenesis_vdp.h"
 #include "gwenesis/savestate/gwenesis_savestate.h"
+#include <gwenesis/sound/gwenesis_sn76489.h>
 }
 
 #include "graphics.h"
@@ -33,6 +37,12 @@ static const uintptr_t rom = XIP_BASE + FLASH_TARGET_OFFSET;
 char __uninitialized_ram(filename[256]);
 
 static FATFS fs;
+i2s_config_t i2s_config;
+uint8_t snd_accurate = 0;
+/* shared variables with gwenesis_sn76589 */
+int16_t gwenesis_sn76489_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  // 888 = NTSC, PAL = 1056 (too big) //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
+int sn76489_index;                                                      /* sn78649 audio buffer index */
+int sn76489_clock;                                                      /* sn78649 clock in video clock resolution */
 
 semaphore vga_start_semaphore;
 static uint8_t SCREEN[240][320];
@@ -664,6 +674,12 @@ void gwenesis_io_get_buttons() {
 void __scratch_x("render") render_core() {
     multicore_lockout_victim_init();
 
+    i2s_config = i2s_get_default_config();
+    i2s_config.sample_freq = GWENESIS_AUDIO_FREQ_NTSC;
+    i2s_config.dma_trans_count = GWENESIS_AUDIO_BUFFER_LENGTH_NTSC;
+    i2s_volume(&i2s_config, 1);
+    i2s_init(&i2s_config);
+
     ps2kbd.init_gpio();
     nespad_begin(clock_get_hz(clk_sys) / 1000, NES_GPIO_CLK, NES_GPIO_DATA, NES_GPIO_LAT);
 
@@ -682,6 +698,7 @@ void __scratch_x("render") render_core() {
 #define frame_tick (16666)
     uint64_t tick = time_us_64();
     uint64_t last_frame_tick = tick;
+    int old_frame = 0;
 
     while (true) {
         if (tick >= last_frame_tick + frame_tick) {
@@ -698,6 +715,12 @@ void __scratch_x("render") render_core() {
 
         // tuh_task();
         // hid_app_task();
+
+        if (old_frame != frame ) {
+            gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
+
+            old_frame = frame;
+        }
         tight_loop_contents();
     }
 
@@ -724,6 +747,8 @@ void __time_critical_func(emulate)() {
 
         /* Reset the difference clocks and audio index */
         system_clock = 0;
+        sn76489_clock = 0;
+        sn76489_index = 0;
 
         scan_line = 0;
 
@@ -791,6 +816,14 @@ void __time_critical_func(emulate)() {
 
         /* copy audio samples for DMA */
         //gwenesis_sound_submit();
+        int16_t snd_buf[sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR];
+
+        for (int h = 0; h < sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++)
+            snd_buf[h] =
+                // gwenesis_ym2612_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR] +
+                     (gwenesis_sn76489_buffer[h / 2/ GWENESIS_AUDIO_SAMPLING_DIVISOR]);
+
+        i2s_dma_write(&i2s_config, snd_buf);
     }
     reboot = false;
 }
@@ -801,6 +834,9 @@ int main() {
     sem_init(&vga_start_semaphore, 0, 1);
     multicore_launch_core1(render_core);
     sem_release(&vga_start_semaphore);
+
+
+    memset(gwenesis_sn76489_buffer,0,sizeof(gwenesis_sn76489_buffer));
 
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
