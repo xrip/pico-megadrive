@@ -35,7 +35,7 @@ static int reset_once = 0;
 int zclk = 0;
 static int initialized = 0;
 
-#define audio_enabled (1)
+extern bool sound_enabled;
 
 unsigned char *Z80_RAM;
 

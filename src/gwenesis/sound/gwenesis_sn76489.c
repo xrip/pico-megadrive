@@ -34,7 +34,7 @@
 #include "../bus/gwenesis_bus.h"
 #include "../sound/gwenesis_sn76489.h"
 #include "../savestate/gwenesis_savestate.h"
-#define audio_enabled (1)
+extern bool sound_enabled;
 #define NoiseInitialState   0x8000  /* Initial state of shift register */
 #define PSG_CUTOFF          0x6     /* Value below which PSG does not output */
 // #define PSG_MAX_VOLUME 2800
@@ -228,7 +228,7 @@ if ( sn76489_clock >= target) return;
 }
 void gwenesis_SN76489_Write(int data, int target)
 {
-  if (!audio_enabled)
+  if (!sound_enabled)
 	 return;
 
   if (snd_accurate == 1)
