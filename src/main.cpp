@@ -40,7 +40,7 @@ static FATFS fs;
 i2s_config_t i2s_config;
 uint8_t snd_accurate = 0;
 /* shared variables with gwenesis_sn76589 */
-int16_t gwenesis_sn76489_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  // 888 = NTSC, PAL = 1056 (too big) //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
+int16_t __scratch_y("snd2") gwenesis_sn76489_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  // 888 = NTSC, PAL = 1056 (too big) //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
 int sn76489_index;                                                      /* sn78649 audio buffer index */
 int sn76489_clock;                                                      /* sn78649 clock in video clock resolution */
 
@@ -60,6 +60,8 @@ bool interlace = false;
 bool frameskip = true;
 bool flash_line = true;
 bool flash_frame = true;
+bool sound_enabled = true;
+bool z80_enabled = false;
 uint8_t player_1_input = GAMEPAD1;
 uint8_t player_2_input = KEYBOARD;
 
@@ -212,6 +214,8 @@ const MenuItem menu_items[] = {
     //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
     {"Frameskip: %s", ARRAY, &frameskip, nullptr, 1, {"NO ", "YES"}},
     {"Interlace mode: %s", ARRAY, &interlace, nullptr, 1, {"NO ", "YES"}},
+    {"Some sounds: %s", ARRAY, &sound_enabled, nullptr, 1, {"Disabled", "Enabled "}},
+    {"Z80 emulation: %s", ARRAY, &z80_enabled, nullptr, 1, {"Disabled", "Enabled "}},
     {
         "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
         {"378", "396", "404", "408", "412", "416", "420", "424", "432"}
@@ -675,7 +679,7 @@ void __scratch_x("render") render_core() {
     multicore_lockout_victim_init();
 
     i2s_config = i2s_get_default_config();
-    i2s_config.sample_freq = GWENESIS_AUDIO_FREQ_NTSC;
+    i2s_config.sample_freq = GWENESIS_AUDIO_FREQ_NTSC / 2;
     i2s_config.dma_trans_count = GWENESIS_AUDIO_BUFFER_LENGTH_NTSC;
     i2s_volume(&i2s_config, 1);
     i2s_init(&i2s_config);
@@ -715,10 +719,17 @@ void __scratch_x("render") render_core() {
 
         // tuh_task();
         // hid_app_task();
-
-        if (old_frame != frame ) {
+        if (sound_enabled && old_frame != frame ) {
             gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
+            static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
+            // int16_t snd_buf[sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR];
 
+            for (int h = 0; h < sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++)
+                snd_buf[h] =
+                    // gwenesis_ym2612_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR] +
+                         (gwenesis_sn76489_buffer[h / 2/ GWENESIS_AUDIO_SAMPLING_DIVISOR]);
+
+            i2s_dma_write(&i2s_config, snd_buf);
             old_frame = frame;
         }
         tight_loop_contents();
@@ -816,14 +827,7 @@ void __time_critical_func(emulate)() {
 
         /* copy audio samples for DMA */
         //gwenesis_sound_submit();
-        int16_t snd_buf[sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR];
 
-        for (int h = 0; h < sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++)
-            snd_buf[h] =
-                // gwenesis_ym2612_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR] +
-                     (gwenesis_sn76489_buffer[h / 2/ GWENESIS_AUDIO_SAMPLING_DIVISOR]);
-
-        i2s_dma_write(&i2s_config, snd_buf);
     }
     reboot = false;
 }
