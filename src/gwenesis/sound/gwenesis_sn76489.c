@@ -138,8 +138,10 @@ static inline void gwenesis_SN76489_Update(INT16 *buffer, int length)
 {
     int i, j;
 
+    #pragma gcc unroll
     for(j = 0; j < length; j++)
     {
+#pragma gcc unroll(2)
         for (i=0;i<=2;++i)
             if (gwenesis_SN76489.IntermediatePos[i]!=LONG_MIN)
                 gwenesis_SN76489.Channels[i]=PSGVolumeValues[gwenesis_SN76489.Registers[2*i+1]]*gwenesis_SN76489.IntermediatePos[i]/65536;
@@ -168,6 +170,7 @@ static inline void gwenesis_SN76489_Update(INT16 *buffer, int length)
         else gwenesis_SN76489.ToneFreqVals[3]-=gwenesis_SN76489.NumClocksForSample;
 
         /* Tone channels: */
+#pragma gcc unroll(4)
         for (i=0;i<=2;++i) {
             if (gwenesis_SN76489.ToneFreqVals[i]<=0) {   /* If it gets below 0... */
                 if (gwenesis_SN76489.Registers[i*2]>PSG_CUTOFF) {

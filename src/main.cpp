@@ -40,7 +40,7 @@ static FATFS fs;
 i2s_config_t i2s_config;
 uint8_t snd_accurate = 0;
 /* shared variables with gwenesis_sn76589 */
-int16_t __scratch_y("snd2") gwenesis_sn76489_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  // 888 = NTSC, PAL = 1056 (too big) //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
+int16_t gwenesis_sn76489_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  // 888 = NTSC, PAL = 1056 (too big) //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
 int sn76489_index;                                                      /* sn78649 audio buffer index */
 int sn76489_clock;                                                      /* sn78649 clock in video clock resolution */
 
@@ -721,7 +721,7 @@ void __scratch_x("render") render_core() {
         // hid_app_task();
         if (sound_enabled && old_frame != frame ) {
             gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
-            static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
+            static int16_t  snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
             // int16_t snd_buf[sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR];
 
             for (int h = 0; h < sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++)
@@ -763,12 +763,11 @@ void __time_critical_func(emulate)() {
         sn76489_index = 0;
 
         scan_line = 0;
-
+        if (z80_enabled)
+            z80_run(262 + VDP_CYCLES_PER_LINE);
         while (scan_line < lines_per_frame) {
             /* CPUs */
             m68k_run(system_clock + VDP_CYCLES_PER_LINE);
-            if (z80_enabled)
-                z80_run(system_clock + VDP_CYCLES_PER_LINE);
 
             /* Video */
             // Interlace mode

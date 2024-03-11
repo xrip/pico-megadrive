@@ -237,13 +237,6 @@ static void __scratch_y("hdmi_driver") dma_handler_HDMI() {
                 *output_buffer = 255;
                 break;
             }
-            default:
-                for (int i = SCREEN_WIDTH; i--;) {
-                    uint8_t i_color = *input_buffer++;
-                    i_color = (i_color & 0xf0) == 0xf0 ? 255 : i_color;
-                    *output_buffer++ = i_color;
-                }
-                break;
         }
 
 
