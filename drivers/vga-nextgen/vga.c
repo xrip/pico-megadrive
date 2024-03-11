@@ -333,6 +333,7 @@ void __time_critical_func() dma_handler_VGA() {
 }
 
 void graphics_set_mode(enum graphics_mode_t mode) {
+    if (!graphics_buffer) return;
     switch (mode) {
         case TEXTMODE_53x30:
             text_buffer_width = 40;

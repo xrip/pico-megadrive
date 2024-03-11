@@ -137,6 +137,10 @@
 #include "../bus/gwenesis_bus.h"
 #include "../savestate/gwenesis_savestate.h"
 
+#if GENERATE_TABLES
+#include "ff.h"
+#endif
+
 typedef uint32_t UINT32;
 typedef uint16_t UINT16;
 typedef uint8_t UINT8;
@@ -212,15 +216,20 @@ void ym_log(const char *subs, const char *fmt, ...) {
 *   TL_RES_LEN - sinus resolution (X axis)
 */
 #define TL_TAB_LEN (13*2*TL_RES_LEN)
-// FIXME: В константу!!
+#if GENERATE_TABLES
 static signed int tl_tab[TL_TAB_LEN];
+#else
+#include "tl_tab.h"
+#endif
 
 #define ENV_QUIET    (TL_TAB_LEN>>3)
 
 /* sin waveform table in 'decibel' scale */
-// FIXME: В константу!!
+#if GENERATE_TABLES
 static unsigned int sin_tab[SIN_LEN];
-
+#else
+#include "sin_tab.h"
+#endif
 /* sustain level table (3dB per step) */
 /* bit0, bit1, bit2, bit3, bit4, bit5, bit6 */
 /* 1,    2,    4,    8,    16,   32,   64   (value)*/
@@ -513,9 +522,11 @@ static const UINT8 lfo_pm_output[7*8][8]={
 };
 
 /* all 128 LFO PM waveforms */
-// FIXME: В константу!!
+#if GENERATE_TABLES
 static UINT8 lfo_pm_table[128*8*16];  /* 128 combinations of 7 bits meaningful (of F-NUMBER), 8 LFO depths, 32 LFO output levels per one depth */
-
+#else
+#include "lfo_pm_table.h"
+#endif
 /* register number to channel number , slot offset */
 #define OPN_CHAN(N) (N&3)
 #define OPN_SLOT(N) ((N>>2)&3)
@@ -628,6 +639,12 @@ typedef struct
 
 } FM_3SLOT;
 
+#if GENERATE_TABLES
+static UINT32 fn_table[4096];
+#else
+#include "fn_table.h"
+#endif
+
 /* OPN/A/B common state */
 typedef struct
 {
@@ -642,8 +659,7 @@ typedef struct
 
   /* there are 2048 FNUMs that can be generated using FNUM/BLK registers
         but LFO works with one more bit of a precision so we really need 4096 elements */
-  // FIXME: В константу!!
-  UINT32  fn_table[4096];     /* fnumber->increment counter */
+  const unsigned int* pfn_table;    /* fnumber->increment counter */
   UINT32  fn_max;             /* max increment (required for calculating phase overflow) */
 
   /* LFO */
@@ -1345,7 +1361,7 @@ INLINE void update_phase_lfo_slot(FM_SLOT *SLOT , INT32 pms, UINT32 block_fnum)
     kc = (blk<<2) | opn_fktable[block_fnum >> 8];
 
     /* (frequency) phase increment counter */
-    fc = (ym2612.OPN.fn_table[block_fnum]>>(7-blk)) + SLOT->DT[kc];
+    fc = (ym2612.OPN.pfn_table[block_fnum]>>(7-blk)) + SLOT->DT[kc];
       
     /* (frequency) phase overflow (credits to Nemesis) */
     if (fc < 0) fc += ym2612.OPN.fn_max;
@@ -1379,7 +1395,7 @@ INLINE void update_phase_lfo_channel(FM_CH *CH)
     kc = (blk<<2) | opn_fktable[block_fnum >> 8];
 
      /* (frequency) phase increment counter */
-    fc = (ym2612.OPN.fn_table[block_fnum]>>(7-blk));
+    fc = (ym2612.OPN.pfn_table[block_fnum]>>(7-blk));
 
     /* (frequency) phase overflow (credits to Nemesis) */
     finc = fc + CH->SLOT[SLOT1].DT[kc];
@@ -1755,7 +1771,7 @@ INLINE void OPNWriteReg(int r, int v)
           /* keyscale code */
           CH->kcode = (blk<<2) | opn_fktable[fn >> 7];
           /* phase increment counter */
-          CH->fc = ym2612.OPN.fn_table[fn*2]>>(7-blk);
+          CH->fc = ym2612.OPN.pfn_table[fn*2]>>(7-blk);
 
           /* store fnum in clear form for LFO PM calculations */
           CH->block_fnum = (blk<<11) | fn;
@@ -1774,7 +1790,7 @@ INLINE void OPNWriteReg(int r, int v)
             /* keyscale code */
             ym2612.OPN.SL3.kcode[c]= (blk<<2) | opn_fktable[fn >> 7];
             /* phase increment counter */
-            ym2612.OPN.SL3.fc[c] = ym2612.OPN.fn_table[fn*2]>>(7-blk);
+            ym2612.OPN.SL3.fc[c] = ym2612.OPN.pfn_table[fn*2]>>(7-blk);
             ym2612.OPN.SL3.block_fnum[c] = (blk<<11) | fn;
             ym2612.CH[2].SLOT[SLOT1].Incr=-1;
           }
@@ -1833,6 +1849,8 @@ static void init_timetables(double freqbase)
   /* there are 2048 FNUMs that can be generated using FNUM/BLK registers
       but LFO works with one more bit of a precision so we really need 4096 elements */
   /* calculate fnumber -> increment counter table */
+  ym2612.OPN.pfn_table = &fn_table[0];
+#if GENERATE_TABLES
   for(i = 0; i < 4096; i++)
   {
     /* freq table for octave 7 */
@@ -1841,9 +1859,34 @@ static void init_timetables(double freqbase)
     /* where sample clock is  M/144 */
     /* this means the increment value for one clock sample is FNUM * 2^(B-1) = FNUM * 64 for octave 7 */
     /* we also need to handle the ratio between the chip frequency and the emulated frequency (can be 1.0)  */
-    ym2612.OPN.fn_table[i] = (UINT32)( (double)i * 32 * freqbase * (1<<(FREQ_SH-10)) ); /* -10 because chip works with 10.10 fixed point, while we use 16.16 */
+    ym2612.OPN.pfn_table[i] = (UINT32)( (double)i * 32 * freqbase * (1<<(FREQ_SH-10)) ); /* -10 because chip works with 10.10 fixed point, while we use 16.16 */
   }
-
+	FIL f;
+	UINT bw;
+	char tmp[64];
+	const char * str = "const unsigned int __in_flash() __aligned(4) fn_table[] = {\n";
+	f_open(&f, "\\fn_table.h", FA_CREATE_ALWAYS | FA_WRITE);
+	f_write(&f, str, strlen(str), &bw);
+  sprintf(tmp, " // freqbase: %f\n", freqbase);
+	f_write(&f, tmp, strlen(tmp), &bw);
+	for(int i = 0; i < sizeof(fn_table) / sizeof(int); ++i) {
+		if (i && !(i % 16)) {
+			sprintf(tmp, " // 0x%08X\n", (i - 16) * sizeof(int));
+			f_write(&f, tmp, strlen(tmp), &bw);
+		}
+		if (i == 0) {
+			str = "  ";
+		} else {
+			str = ", ";
+		}
+		f_write(&f, str, strlen(str), &bw);
+		sprintf(tmp, "%d", fn_table[i]);
+		f_write(&f, tmp, strlen(tmp), &bw);
+	}
+	str = "};\n";
+	f_write(&f, str, strlen(str), &bw);
+	f_close(&f);
+#endif
   /* maximal frequency is required for Phase overflow calculation, register size is 17 bits (Nemesis) */
   ym2612.OPN.fn_max = (UINT32)( (double)0x20000 * freqbase * (1<<(FREQ_SH-10)) );
 }
@@ -1902,7 +1945,7 @@ static void init_tables(void)
   signed int i,x,d;
   signed int n;
   double o,m;
-  
+#if GENERATE_TABLES  
   /* build Linear Power Table */
   for (x=0; x<TL_RES_LEN; x++)
   {
@@ -1990,7 +2033,7 @@ static void init_tables(void)
       }
     }
   }
-  
+#endif
   /* build DETUNE table */
   for (d = 0;d <= 3;d++)
   {
@@ -2000,6 +2043,74 @@ static void init_tables(void)
       ym2612.OPN.ST.dt_tab[d+4][i] = -ym2612.OPN.ST.dt_tab[d][i];
     }
   }
+#if GENERATE_TABLES
+	FIL f;
+	UINT bw;
+	char tmp[64];
+	const char * str = "const unsigned char __in_flash() __aligned(4) lfo_pm_table[] = {\n";
+	f_open(&f, "\\lfo_pm_table.h", FA_CREATE_ALWAYS | FA_WRITE);
+	f_write(&f, str, strlen(str), &bw);
+	for(int i = 0; i < sizeof(lfo_pm_table); ++i) {
+		if (i && !(i % 16)) {
+			sprintf(tmp, " // 0x%08X\n", i - 16);
+			f_write(&f, tmp, strlen(tmp), &bw);
+		}
+		if (i == 0) {
+			str = "  ";
+		} else {
+			str = ", ";
+		}
+		f_write(&f, str, strlen(str), &bw);
+		sprintf(tmp, "0x%02X", (unsigned char)lfo_pm_table[i] & 0xFF);
+		f_write(&f, tmp, strlen(tmp), &bw);
+	}
+	str = "};\n";
+	f_write(&f, str, strlen(str), &bw);
+	f_close(&f);
+
+	str = "const signed int __in_flash() __aligned(4) tl_tab[] = {\n";
+	f_open(&f, "\\tl_tab.h", FA_CREATE_ALWAYS | FA_WRITE);
+	f_write(&f, str, strlen(str), &bw);
+	for(int i = 0; i < sizeof(tl_tab) / sizeof(int); ++i) {
+		if (i && !(i % 16)) {
+			sprintf(tmp, " // 0x%08X\n", (i - 16) * sizeof(int));
+			f_write(&f, tmp, strlen(tmp), &bw);
+		}
+		if (i == 0) {
+			str = "  ";
+		} else {
+			str = ", ";
+		}
+		f_write(&f, str, strlen(str), &bw);
+		sprintf(tmp, "%d", tl_tab[i]);
+		f_write(&f, tmp, strlen(tmp), &bw);
+	}
+	str = "};\n";
+	f_write(&f, str, strlen(str), &bw);
+	f_close(&f);
+
+	str = "const unsigned int __in_flash() __aligned(4) sin_tab[] = {\n";
+	f_open(&f, "\\sin_tab.h", FA_CREATE_ALWAYS | FA_WRITE);
+	f_write(&f, str, strlen(str), &bw);
+	for(int i = 0; i < sizeof(sin_tab) / sizeof(int); ++i) {
+		if (i && !(i % 16)) {
+			sprintf(tmp, " // 0x%08X\n", (i - 16) * sizeof(int));
+			f_write(&f, tmp, strlen(tmp), &bw);
+		}
+		if (i == 0) {
+			str = "  ";
+		} else {
+			str = ", ";
+		}
+		f_write(&f, str, strlen(str), &bw);
+		sprintf(tmp, "%d", sin_tab[i]);
+		f_write(&f, tmp, strlen(tmp), &bw);
+	}
+	str = "};\n";
+	f_write(&f, str, strlen(str), &bw);
+	f_close(&f);
+
+#endif
 }
 
 

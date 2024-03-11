@@ -53,7 +53,14 @@ int sn76489_index;                                                      /* sn786
 int sn76489_clock;                                                      /* sn78649 clock in video clock resolution */
 
 semaphore vga_start_semaphore;
+#if GENERATE_TABLES
+extern "C" {
+    #include "gwenesis/sound/ym2612.h"
+}
+static uint8_t* SCREEN = 0;
+#else
 static uint8_t SCREEN[240][320];
+#endif
 
 enum input_device {
     KEYBOARD,
@@ -342,7 +349,7 @@ typedef struct __attribute__((__packed__)) {
 } file_item_t;
 
 constexpr int max_files = 600;
-file_item_t* fileItems = (file_item_t *) (&SCREEN[0][0] + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
+file_item_t* fileItems = (file_item_t *) ((uint8_t *)SCREEN + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
 
 int compareFileItems(const void* a, const void* b) {
     const auto* itemA = (file_item_t *) a;
@@ -452,6 +459,11 @@ void filebrowser(const char pathname[256], const char executables[11]) {
         draw_text("SD Card not inserted or SD Card error!", 0, 0, 12, 0);
         while (true);
     }
+#if GENERATE_TABLES
+    YM2612Init();
+    while(1);
+#endif
+
 
     while (true) {
         memset(fileItems, 0, sizeof(file_item_t) * max_files);
@@ -760,7 +772,7 @@ void __time_critical_func(emulate)() {
 
         // graphics_set_buffer(buffer, screen_width, screen_height);
         // TODO: move to separate function graphics_set_dimensions ?
-        graphics_set_buffer(&SCREEN[0][0], screen_width, screen_height);
+        graphics_set_buffer((uint8_t *)SCREEN, screen_width, screen_height);
         graphics_set_offset(screen_width != 320 ? 32 : 0, screen_height != 240 ? 8 : 0);
         gwenesis_vdp_render_config();
 

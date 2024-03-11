@@ -128,6 +128,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
+		GENERATE_TABLES=0
+
 		PICO_FLASH_SIZE_BYTES=16777216
 		# SDCARD
 		SDCARD_PIN_SPI0_CS=5
