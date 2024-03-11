@@ -2120,6 +2120,7 @@ static void init_tables(void)
 void YM2612Init()
 {
   memset(&ym2612,0,sizeof(YM2612));
+  ym2612.OPN.pfn_table = fn_table;
   init_tables();
   ym2612.OPN.ST.clock = GWENESIS_AUDIO_FREQ_PAL;
   ym2612.OPN.ST.rate = GWENESIS_AUDIO_FREQ_PAL / (6*24) / GWENESIS_AUDIO_SAMPLING_DIVISOR;
