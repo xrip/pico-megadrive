@@ -28,6 +28,7 @@ __license__ = "GPLv3"
 #include "gwenesis_bus.h"
 
 #include <gwenesis/sound/gwenesis_sn76489.h>
+#include <gwenesis/sound/ym2612.h>
 
 #include "../io/gwenesis_io.h"
 #include "../vdp/gwenesis_vdp.h"
@@ -113,6 +114,9 @@ void power_on() {
   z80_start();
 
   // Initialize YM2612 chip
+  YM2612Init();
+  YM2612Config(9);
+
   // Initialize PSG SN76489 chip
   //CLOCK_NTSC      = 3579545,
   //CLOCK_PAL       = 3546895,
