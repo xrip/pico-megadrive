@@ -756,6 +756,7 @@ void __time_critical_func(emulate)() {
         graphics_set_offset(screen_width != 320 ? 32 : 0, screen_height != 240 ? 8 : 0);
         gwenesis_vdp_render_config();
 
+        zclk = 0;
         /* Reset the difference clocks and audio index */
         system_clock = 0;
         sn76489_clock = 0;
@@ -766,6 +767,8 @@ void __time_critical_func(emulate)() {
         while (scan_line < lines_per_frame) {
             /* CPUs */
             m68k_run(system_clock + VDP_CYCLES_PER_LINE);
+            if (z80_enabled)
+                z80_run(system_clock + VDP_CYCLES_PER_LINE);
 
             /* Video */
             // Interlace mode
@@ -796,9 +799,11 @@ void __time_critical_func(emulate)() {
                     gwenesis_vdp_status |= STATUS_VIRQPENDING;
                     m68k_set_irq(6);
                 }
+                z80_irq_line(1);
             }
 
             if (!is_pal && scan_line == screen_height + 1) {
+                z80_irq_line(0);
                 // FRAMESKIP every 3rd frame
                 if (frameskip && frame % 3 == 0) {
                     drawFrame = 0;

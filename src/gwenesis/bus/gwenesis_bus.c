@@ -89,7 +89,11 @@ void load_cartridge(uintptr_t rom)
     memset(M68K_RAM, 0, MAX_RAM_SIZE);
     memset(ZRAM, 0, MAX_Z80_RAM_SIZE);
 
-    // Set Z80 Memory as Z80_RAM
+  // Set Z80 Memory as Z80_RAM
+  z80_set_memory(ZRAM);
+
+  z80_pulse_reset();
+
 
     set_region();
 }
@@ -106,6 +110,8 @@ void power_on() {
   // Initialize M68K CPU
   m68k_init();
   // Initialize Z80 CPU
+  z80_start();
+
   // Initialize YM2612 chip
   // Initialize PSG SN76489 chip
   //CLOCK_NTSC      = 3579545,
@@ -129,6 +135,7 @@ void power_on() {
  ******************************************************************************/
 void reset_emulation() {
   // Send a reset pulse to Z80 CPU
+  z80_pulse_reset();
   // Send a reset pulse to Z80 M68K
   m68k_pulse_reset();
   // Send a reset pulse to YM2612 chip
