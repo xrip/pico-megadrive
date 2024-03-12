@@ -603,6 +603,11 @@ typedef struct
   UINT32  block_fnum;   /* current blk/fnum value for this slot (can be different betweeen slots of one channel in 3slot mode) */
 } FM_CH;
 
+#if GENERATE_TABLES
+int ym2612_OPN_ST_dt_tab[8][32];  /* DeTune table         */
+#else
+#include "ym2612_OPN_ST_dt_tab.h"
+#endif
 
 typedef struct
 {
@@ -619,8 +624,6 @@ typedef struct
   INT32   TB;             /* timer b value        */
   INT32   TBL;            /* timer b base          */
   INT32   TBC;            /* timer b counter      */
-  INT32   dt_tab[8][32];  /* DeTune table         */
-
 } FM_ST;
 
 
@@ -640,7 +643,7 @@ typedef struct
 } FM_3SLOT;
 
 #if GENERATE_TABLES
-static UINT32 fn_table[4096];
+static unsigned int fn_table[4096];
 #else
 #include "fn_table.h"
 #endif
@@ -658,8 +661,11 @@ typedef struct
   UINT32  eg_timer_overflow;  /* envelope generator timer overlfows every 3 samples (on real chip) */
 
   /* there are 2048 FNUMs that can be generated using FNUM/BLK registers
-        but LFO works with one more bit of a precision so we really need 4096 elements */
-  const unsigned int* pfn_table;    /* fnumber->increment counter */
+     but LFO works with one more bit of a precision so we really need 4096 elements */
+#if !GENERATE_TABLES
+  const 
+#endif
+  unsigned int* pfn_table;    /* fnumber->increment counter */
   UINT32  fn_max;             /* max increment (required for calculating phase overflow) */
 
   /* LFO */
@@ -1018,7 +1024,7 @@ INLINE void setup_connection( FM_CH *CH, int ch )
 INLINE void set_det_mul(FM_CH *CH,FM_SLOT *SLOT,int v)
 {
   SLOT->mul = (v&0x0f)? (v&0x0f)*2 : 1;
-  SLOT->DT  = ym2612.OPN.ST.dt_tab[(v>>4)&7];
+  SLOT->DT  = (INT32*)ym2612_OPN_ST_dt_tab[(v>>4)&7];
   CH->SLOT[SLOT1].Incr=-1;
 }
 
@@ -1834,23 +1840,22 @@ static void init_timetables(double freqbase)
 {
   int i,d;
   double rate;
-
+  ym2612.OPN.pfn_table = &fn_table[0];
+#if GENERATE_TABLES
   /* DeTune table */
   for (d = 0;d <= 3;d++)
   {
     for (i = 0;i <= 31;i++)
     {
       rate = ((double)dt_tab[d*32 + i]) * freqbase * (1<<(FREQ_SH-10)); /* -10 because chip works with 10.10 fixed point, while we use 16.16 */
-      ym2612.OPN.ST.dt_tab[d][i]   = (INT32) rate;
-      ym2612.OPN.ST.dt_tab[d+4][i] = -ym2612.OPN.ST.dt_tab[d][i];
+      ym2612_OPN_ST_dt_tab[d][i]   = (INT32) rate;
+      ym2612_OPN_ST_dt_tab[d+4][i] = -ym2612_OPN_ST_dt_tab[d][i];
     }
   }
 
   /* there are 2048 FNUMs that can be generated using FNUM/BLK registers
       but LFO works with one more bit of a precision so we really need 4096 elements */
   /* calculate fnumber -> increment counter table */
-  ym2612.OPN.pfn_table = &fn_table[0];
-#if GENERATE_TABLES
   for(i = 0; i < 4096; i++)
   {
     /* freq table for octave 7 */
@@ -1859,7 +1864,7 @@ static void init_timetables(double freqbase)
     /* where sample clock is  M/144 */
     /* this means the increment value for one clock sample is FNUM * 2^(B-1) = FNUM * 64 for octave 7 */
     /* we also need to handle the ratio between the chip frequency and the emulated frequency (can be 1.0)  */
-    ym2612.OPN.pfn_table[i] = (UINT32)( (double)i * 32 * freqbase * (1<<(FREQ_SH-10)) ); /* -10 because chip works with 10.10 fixed point, while we use 16.16 */
+    ym2612.OPN.pfn_table[i] = (unsigned int)( (double)i * 32 * freqbase * (1<<(FREQ_SH-10)) ); /* -10 because chip works with 10.10 fixed point, while we use 16.16 */
   }
 	FIL f;
 	UINT bw;
@@ -1882,6 +1887,35 @@ static void init_timetables(double freqbase)
 		f_write(&f, str, strlen(str), &bw);
 		sprintf(tmp, "%d", fn_table[i]);
 		f_write(&f, tmp, strlen(tmp), &bw);
+	}
+	str = "};\n";
+	f_write(&f, str, strlen(str), &bw);
+	f_close(&f);
+
+  str = "const unsigned int __in_flash() __aligned(4) ym2612_OPN_ST_dt_tab[8][32] = {\n";
+	f_open(&f, "\\ym2612_OPN_ST_dt_tab.h", FA_CREATE_ALWAYS | FA_WRITE);
+	f_write(&f, str, strlen(str), &bw);
+  sprintf(tmp, " // freqbase: %f\n", freqbase);
+	f_write(&f, tmp, strlen(tmp), &bw);
+	for(int i = 0; i < 8; ++i) {
+	 if (i == 0) {
+			str = " {";
+	 } else {
+			str = ", {";
+	 }
+	 f_write(&f, str, strlen(str), &bw);
+   for(int j = 0; j < 32; ++j) {
+		if (j == 0) {
+			str = "  ";
+		} else {
+			str = ", ";
+		}
+		f_write(&f, str, strlen(str), &bw);
+		sprintf(tmp, "%d", ym2612_OPN_ST_dt_tab[i][j]);
+		f_write(&f, tmp, strlen(tmp), &bw);
+   }
+   str = " },\n";
+	 f_write(&f, str, strlen(str), &bw);
 	}
 	str = "};\n";
 	f_write(&f, str, strlen(str), &bw);
@@ -2033,17 +2067,15 @@ static void init_tables(void)
       }
     }
   }
-#endif
   /* build DETUNE table */
   for (d = 0;d <= 3;d++)
   {
     for (i = 0;i <= 31;i++)
     {
-      ym2612.OPN.ST.dt_tab[d][i]   = (INT32) dt_tab[d*32 + i];
-      ym2612.OPN.ST.dt_tab[d+4][i] = -ym2612.OPN.ST.dt_tab[d][i];
+      ym2612_OPN_ST_dt_tab[d][i]   = (INT32) dt_tab[d*32 + i];
+      ym2612_OPN_ST_dt_tab[d+4][i] = -ym2612_OPN_ST_dt_tab[d][i];
     }
   }
-#if GENERATE_TABLES
 	FIL f;
 	UINT bw;
 	char tmp[64];
@@ -2109,17 +2141,13 @@ static void init_tables(void)
 	str = "};\n";
 	f_write(&f, str, strlen(str), &bw);
 	f_close(&f);
-
 #endif
 }
 
-
-
 /* initialize ym2612 emulator(s) */
-//void YM2612Init(double clock, int rate)
 void YM2612Init()
 {
-  memset(&ym2612,0,sizeof(YM2612));
+  memset(&ym2612, 0, sizeof(YM2612));
   ym2612.OPN.pfn_table = fn_table;
   init_tables();
   ym2612.OPN.ST.clock = GWENESIS_AUDIO_FREQ_PAL;
@@ -2232,7 +2260,7 @@ return ym2612.OPN.ST.status & 0xff;
 }
 
 /* Generate samples for ym2612 */
-void YM2612Update(uint8_t *buffer, int length)
+static void YM2612Update(uint16_t *buffer, int length)
 {
   int i;
   int lt;
@@ -2331,7 +2359,7 @@ void YM2612Update(uint8_t *buffer, int length)
     lt += out_fm[5];
 
     /* buffering */
-    *buffer++ = lt / (2 << (11 - snd_output_volume));
+    *buffer++ += lt / (2 << (11 - snd_output_volume));
 
     /* CSM mode: if CSM Key ON has occured, CSM Key OFF need to be sent       */
     /* only if Timer A does not overflow again (i.e CSM Key ON not set again) */
@@ -2367,7 +2395,7 @@ void ym2612_run(int target) {
   int ym2612_prev_index = ym2612_index;
   ym2612_index += (target-ym2612_clock) / ym2612.divisor;
   if (ym2612_index > ym2612_prev_index) {
-    YM2612Update(gwenesis_ym2612_buffer + ym2612_prev_index, ym2612_index-ym2612_prev_index);
+    YM2612Update(gwenesis_sn76489_buffer + ym2612_prev_index, ym2612_index - ym2612_prev_index);
     ym2612_clock = ym2612_index*ym2612.divisor;
 
   } else {
