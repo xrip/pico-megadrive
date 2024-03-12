@@ -3,6 +3,7 @@
 /* Standard library includes */
 
 
+
 #include <pico/stdlib.h>
 #include <pico/runtime.h>
 #include <hardware/clocks.h>
@@ -21,6 +22,7 @@ extern "C" {
 #include "gwenesis/vdp/gwenesis_vdp.h"
 #include "gwenesis/savestate/gwenesis_savestate.h"
 #include <gwenesis/sound/gwenesis_sn76489.h>
+#include <gwenesis/sound/ym2612.h>
 }
 
 #include "graphics.h"
@@ -40,10 +42,16 @@ static FATFS fs;
 i2s_config_t i2s_config;
 uint8_t snd_accurate = 0;
 /* shared variables with gwenesis_sn76589 */
-int16_t gwenesis_sn76489_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  // 888 = NTSC, PAL = 1056 (too big) //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
+int16_t gwenesis_sn76489_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_PAL * 2];  // 888 = NTSC, PAL = 1056 (too big) //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
 int sn76489_index;                                                      /* sn78649 audio buffer index */
 int sn76489_clock;                                                      /* sn78649 clock in video clock resolution */
 
+
+int audio_enable = 1;
+int snd_output_volume = 1;
+int8_t gwenesis_ym2612_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_PAL*2];  //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
+int ym2612_index;                                                     /* ym2612 audio buffer index */
+int ym2612_clock;
 semaphore vga_start_semaphore;
 static uint8_t SCREEN[240][320];
 
@@ -726,7 +734,7 @@ void __scratch_x("render") render_core() {
 
             for (int h = 0; h < sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++)
                 snd_buf[h] =
-                    // gwenesis_ym2612_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR] +
+                    gwenesis_ym2612_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR] +
                          (gwenesis_sn76489_buffer[h / 2/ GWENESIS_AUDIO_SAMPLING_DIVISOR]);
 
             i2s_dma_write(&i2s_config, snd_buf);
@@ -762,13 +770,17 @@ void __time_critical_func(emulate)() {
         sn76489_clock = 0;
         sn76489_index = 0;
 
+
+        ym2612_clock = 0;
+        ym2612_index = 0;
+
         scan_line = 0;
         if (z80_enabled)
             z80_run(262 + VDP_CYCLES_PER_LINE);
         while (scan_line < lines_per_frame) {
             /* CPUs */
             m68k_run(system_clock + VDP_CYCLES_PER_LINE);
-
+            ym2612_run(system_clock + VDP_CYCLES_PER_LINE);
             /* Video */
             // Interlace mode
             if (drawFrame && !interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
