@@ -2260,7 +2260,7 @@ return ym2612.OPN.ST.status & 0xff;
 }
 
 /* Generate samples for ym2612 */
-static void YM2612Update(uint16_t *buffer, int length)
+void YM2612Update(uint16_t *buffer, int length)
 {
   int i;
   int lt;

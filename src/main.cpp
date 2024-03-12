@@ -727,10 +727,10 @@ void __scratch_x("render") render_core() {
 
         if (sound_enabled && old_frame != frame ) {
             gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
-            ym2612_run(system_clock + VDP_CYCLES_PER_LINE);
+        //    ym2612_run(system_clock + VDP_CYCLES_PER_LINE);
             static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
             for (int h = 0; h < sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++) {
-                snd_buf[h] = (gwenesis_sn76489_buffer[h / 2/ GWENESIS_AUDIO_SAMPLING_DIVISOR]) << 3;
+                snd_buf[h] = (gwenesis_sn76489_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR]) << 3;
             }
             i2s_dma_write(&i2s_config, snd_buf);
             old_frame = frame;
