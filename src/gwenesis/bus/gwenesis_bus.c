@@ -142,6 +142,8 @@ void reset_emulation() {
   // Send a reset pulse to Z80 M68K
   m68k_pulse_reset();
   // Send a reset pulse to YM2612 chip
+  YM2612ResetChip();
+
   // Send a reset pulse to SEGA 315-5313 chip
   gwenesis_vdp_reset();
   gwenesis_SN76489_Reset();
