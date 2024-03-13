@@ -71,7 +71,8 @@ unsigned char ZRAM[MAX_Z80_RAM_SIZE]; // Z80 RAM
 unsigned char TMSS[0x4];
 extern unsigned short gwenesis_vdp_status;
 
-extern int audio_enabled;
+//extern int audio_enabled;
+#define audio_enabled 1
 
 // TMSS
 int tmss_state = 0;
@@ -368,7 +369,7 @@ static inline unsigned int gwenesis_bus_read_memory_8(unsigned int address) {
     return ZRAM[address & 0x1FFF];
 
   case Z80_YM2612_ADDR:
-    return 0x00;
+    return (audio_enabled) ? YM2612Read(m68k_cycles_master()) : 0x00;
 
   case Z80_SN76489_ADDR:
     return 0xff;
@@ -418,8 +419,14 @@ static inline unsigned int gwenesis_bus_read_memory_16(unsigned int address) {
   case Z80_RAM_ADDR1K:
     return ZRAM[address & 0X1FFF] | (ZRAM[address & 0X1FFF] << 8);
 
-  case Z80_YM2612_ADDR:
-	  return 0x00;
+    case Z80_YM2612_ADDR:
+      if (audio_enabled) {
+        ret_value = YM2612Read(m68k_cycles_master());
+        return ret_value | ret_value << 8;
+      } else {
+        return 0x00;
+      }
+
 
 
   case Z80_SN76489_ADDR:
@@ -471,6 +478,9 @@ static inline void gwenesis_bus_write_memory_8(unsigned int address,
 
   case Z80_YM2612_ADDR:
     bus_log(__FUNCTION__,"CPUZ80PSG8 ,m68kclk= %d", m68k_cycles_master());
+    if (audio_enabled)
+      YM2612Write(address & 0x3, value & 0Xff,m68k_cycles_master());
+
     return;
 
   case Z80_SN76489_ADDR:
@@ -530,6 +540,9 @@ static inline void gwenesis_bus_write_memory_16(unsigned int address,
 
   case Z80_YM2612_ADDR:
     bus_log(__FUNCTION__,"CZYM16 ,mclk=%d",  m68k_cycles_master());
+    if (audio_enabled)
+      YM2612Write(address & 0x3, value >> 8,m68k_cycles_master() );
+
     return;
 
   case Z80_SN76489_ADDR:
