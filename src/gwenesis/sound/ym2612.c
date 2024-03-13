@@ -2261,7 +2261,7 @@ return ym2612.OPN.ST.status & 0xff;
 }
 
 /* Generate samples for ym2612 */
-void YM2612Update(uint16_t *buffer, int length)
+void YM2612Update(int16_t *buffer, int length)
 {
   int i;
   int lt;
@@ -2360,8 +2360,8 @@ void YM2612Update(uint16_t *buffer, int length)
     lt += out_fm[5];
 
     /* buffering */
-    // *buffer++ += lt;
-    *buffer++ += lt / (2 << (11 - snd_output_volume));
+    *buffer++ += lt;
+    // *buffer++ += lt / (2 << (11 - snd_output_volume));
 
     /* CSM mode: if CSM Key ON has occured, CSM Key OFF need to be sent       */
     /* only if Timer A does not overflow again (i.e CSM Key ON not set again) */
