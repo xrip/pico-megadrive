@@ -1,3 +1,4 @@
+#pragma GCC optimize("Ofast")
 /*
     SN76489 emulation
     by Maxim in 2001 and 2002
@@ -234,7 +235,7 @@ void gwenesis_SN76489_run(int target) {
     int sn76489_prev_index = sn76489_index;
     sn76489_index += (target - sn76489_clock) / gwenesis_SN76489.divisor;
     if (sn76489_index > sn76489_prev_index) {
-        INT16* buf = gwenesis_sn76489_buffer + sn76489_prev_index;
+        int16* buf = gwenesis_sn76489_buffer + sn76489_prev_index;
         int len = sn76489_index - sn76489_prev_index;
         gwenesis_SN76489_Update(buf, len);
         YM2612Update(buf, len);

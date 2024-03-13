@@ -47,8 +47,8 @@ int sn76489_index;                                                      /* sn786
 int sn76489_clock;                                                      /* sn78649 clock in video clock resolution */
 
 
-int audio_enable = 1;
-int snd_output_volume = 1;
+int audio_enabled = 1;
+int snd_output_volume = 9;
 ///int8_t gwenesis_ym2612_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
 int ym2612_index;                                                     /* ym2612 audio buffer index */
 int ym2612_clock;
@@ -687,7 +687,7 @@ void __scratch_x("render") render_core() {
     multicore_lockout_victim_init();
 
     i2s_config = i2s_get_default_config();
-    i2s_config.sample_freq = GWENESIS_AUDIO_FREQ_NTSC / 2;
+    i2s_config.sample_freq = GWENESIS_AUDIO_FREQ_NTSC;
     i2s_config.dma_trans_count = GWENESIS_AUDIO_BUFFER_LENGTH_NTSC;
     i2s_volume(&i2s_config, 1);
     i2s_init(&i2s_config);
@@ -726,12 +726,12 @@ void __scratch_x("render") render_core() {
         tick = time_us_64();
 
         if (sound_enabled && old_frame != frame ) {
-            gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
-        //    ym2612_run(system_clock + VDP_CYCLES_PER_LINE);
+            // gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
             static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
-            for (int h = 0; h < sn76489_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++) {
-                snd_buf[h] = (gwenesis_sn76489_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR]) << 3;
+            for (int h = 0; h < GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2; h++) {
+                snd_buf[h] = (gwenesis_sn76489_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR]);
             }
+            // memcpy(snd_buf, gwenesis_sn76489_buffer, GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2);
             i2s_dma_write(&i2s_config, snd_buf);
             old_frame = frame;
         }
@@ -771,11 +771,13 @@ void __time_critical_func(emulate)() {
 
         scan_line = 0;
         if (z80_enabled)
-            z80_run(262 + VDP_CYCLES_PER_LINE);
+            z80_run(262 * VDP_CYCLES_PER_LINE);
+
         while (scan_line < lines_per_frame) {
             /* CPUs */
             m68k_run(system_clock + VDP_CYCLES_PER_LINE);
-            
+            // if (z80_enabled)
+                // z80_run(system_clock + VDP_CYCLES_PER_LINE);
             /* Video */
             // Interlace mode
             if (drawFrame && !interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {
@@ -816,23 +818,31 @@ void __time_critical_func(emulate)() {
                 } else {
                     drawFrame = 1;
                 }
-
-                frame++;
-                if (limit_fps) {
-                    frame_cnt++;
-                    if (frame_cnt == (is_pal ? 5 : 6)) {
-                        while (time_us_64() - frame_timer_start < (is_pal ? 20000 * 5 : 16666 * 6)) {
-                            busy_wait_at_least_cycles(10);
-                        }; // 60 Hz
-                        frame_timer_start = time_us_64();
-                        frame_cnt = 0;
-                    }
-                }
             }
 
             system_clock += VDP_CYCLES_PER_LINE;
         }
-
+        frame++;
+        if (limit_fps) {
+            frame_cnt++;
+            if (frame_cnt == (is_pal ? 5 : 6)) {
+                while (time_us_64() - frame_timer_start < (is_pal ? 20000 * 5 : 16666 * 6)) {
+                    busy_wait_at_least_cycles(10);
+                }; // 60 Hz
+                frame_timer_start = time_us_64();
+                frame_cnt = 0;
+            }
+        }
+        gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
+        // ym2612_run(262 * VDP_CYCLES_PER_LINE);
+        /*
+        gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
+        ym2612_run(262 * VDP_CYCLES_PER_LINE);
+        static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
+        for (int h = 0; h < ym2612_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++) {
+            snd_buf[h] = (gwenesis_sn76489_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR]) << 3;
+        }
+        i2s_dma_write(&i2s_config, snd_buf);*/
         // reset m68k cycles to the begin of next frame cycle
         m68k.cycles -= system_clock;
 

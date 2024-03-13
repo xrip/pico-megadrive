@@ -27,6 +27,7 @@ __license__ = "GPLv3"
 #include "../bus/gwenesis_bus.h"
 // #include "ym2612.h"
 #include "gwenesis_sn76489.h"
+#include "ym2612.h"
 #include "../savestate/gwenesis_savestate.h"
 
 static int bus_ack = 0;
@@ -35,6 +36,7 @@ static int reset_once = 0;
 int zclk = 0;
 static int initialized = 0;
 
+extern int audio_enabled;
 extern bool sound_enabled;
 
 unsigned char *Z80_RAM;
@@ -270,7 +272,7 @@ byte RdZ80(register word Addr) {
     return Z80_RAM[Addr & 0x1FFF];
 
   if (Addr < 0x6000)
-	// return (audio_enabled) ? YM2612Read(zclk + current_timeslice - (cpu.ICount * Z80_FREQ_DIVISOR)) : 0x00;
+	   return (audio_enabled) ? YM2612Read(zclk + current_timeslice - (cpu.ICount * Z80_FREQ_DIVISOR)) : 0x00;
 	return 0x00;
 
   z80_log(__FUNCTION__, "addr= %x", Addr);
@@ -296,10 +298,8 @@ void WrZ80(register word Addr, register byte Value) {
   // @4000-4003
   if (Addr < 0x6000) {
     z80_log("Z80","ZZYM(%x,%x) zk=%d,tgt=%d",Addr&0x3,Value, zclk, zclk + current_timeslice -(cpu.ICount * Z80_FREQ_DIVISOR) );
-/*
     if (audio_enabled)
 	    YM2612Write(Addr&0x3, Value, zclk + current_timeslice -(cpu.ICount * Z80_FREQ_DIVISOR) );
-*/
     return;
   }
 

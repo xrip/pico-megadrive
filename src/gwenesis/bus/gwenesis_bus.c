@@ -128,7 +128,7 @@ void power_on() {
 //     gwenesis_SN76489_Init(3579545, GWENESIS_AUDIO_BUFFER_LENGTH_NTSC*60,AUDIO_FREQ_DIVISOR);
 //   }
   
-  gwenesis_SN76489_Init(3579545, 888*60,AUDIO_FREQ_DIVISOR);
+  gwenesis_SN76489_Init(3579545, GWENESIS_AUDIO_BUFFER_LENGTH_NTSC*60,AUDIO_FREQ_DIVISOR);
 }
 
 /******************************************************************************
