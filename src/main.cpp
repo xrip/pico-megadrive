@@ -687,7 +687,7 @@ void __scratch_x("render") render_core() {
     multicore_lockout_victim_init();
 
     i2s_config = i2s_get_default_config();
-    i2s_config.sample_freq = GWENESIS_AUDIO_FREQ_NTSC / 2;
+    i2s_config.sample_freq = GWENESIS_AUDIO_FREQ_NTSC;
     i2s_config.dma_trans_count = GWENESIS_AUDIO_BUFFER_LENGTH_NTSC;
     i2s_volume(&i2s_config, 1);
     i2s_init(&i2s_config);

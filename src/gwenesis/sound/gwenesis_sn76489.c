@@ -1,3 +1,4 @@
+#pragma GCC optimize("Ofast")
 /*
     SN76489 emulation
     by Maxim in 2001 and 2002
