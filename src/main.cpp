@@ -48,7 +48,7 @@ int sn76489_clock;                                                      /* sn786
 
 
 int audio_enabled = 1;
-int snd_output_volume = 1;
+int snd_output_volume = 9;
 ///int8_t gwenesis_ym2612_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
 int ym2612_index;                                                     /* ym2612 audio buffer index */
 int ym2612_clock;
