@@ -34,7 +34,7 @@ extern "C" {
 
 #define HOME_DIR "\\SEGA"
 extern char __flash_binary_end;
-#define FLASH_TARGET_OFFSET (((((uintptr_t)&__flash_binary_end - XIP_BASE) / FLASH_SECTOR_SIZE) + 1) * FLASH_SECTOR_SIZE)
+#define FLASH_TARGET_OFFSET (((((uintptr_t)&__flash_binary_end - XIP_BASE) / FLASH_SECTOR_SIZE) + 4) * FLASH_SECTOR_SIZE)
 static const uintptr_t rom = XIP_BASE + FLASH_TARGET_OFFSET;
 char __uninitialized_ram(filename[256]);
 
@@ -64,12 +64,11 @@ enum input_device {
 // SETTINGS
 bool show_fps = true;
 bool limit_fps = true;
-bool interlace = false;
+bool interlace = true;
 bool frameskip = true;
 bool flash_line = true;
 bool flash_frame = true;
-bool sound_enabled = true;
-bool z80_enabled = false;
+bool z80_enabled = true;
 uint8_t player_1_input = GAMEPAD1;
 uint8_t player_2_input = KEYBOARD;
 
@@ -222,7 +221,7 @@ const MenuItem menu_items[] = {
     //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
     {"Frameskip: %s", ARRAY, &frameskip, nullptr, 1, {"NO ", "YES"}},
     {"Interlace mode: %s", ARRAY, &interlace, nullptr, 1, {"NO ", "YES"}},
-    {"Some sounds: %s", ARRAY, &sound_enabled, nullptr, 1, {"Disabled", "Enabled "}},
+    {"Sound: %s", ARRAY, &audio_enabled, nullptr, 1, {"Disabled", "Enabled "}},
     {"Z80 emulation: %s", ARRAY, &z80_enabled, nullptr, 1, {"Disabled", "Enabled "}},
     {
         "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
@@ -725,8 +724,10 @@ void __scratch_x("render") render_core() {
 
         tick = time_us_64();
 
-        if (sound_enabled && old_frame != frame ) {
-            // gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
+        if (audio_enabled && old_frame != frame ) {
+#if TFT | VGA
+            gwenesis_SN76489_run(REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC * VDP_CYCLES_PER_LINE);
+#endif
             static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
             for (int h = 0; h < GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2; h++) {
                 snd_buf[h] = (gwenesis_sn76489_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR]);
@@ -749,13 +750,13 @@ void __time_critical_func(emulate)() {
         int hint_counter = gwenesis_vdp_regs[10];
 
         const bool is_pal = REG1_PAL;
-        screen_height = is_pal ? 240 : 224;
         screen_width = REG12_MODE_H40 ? 320 : 256;
+        screen_height = is_pal ? 240 : 224;
         lines_per_frame = is_pal ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC;
 
         // graphics_set_buffer(buffer, screen_width, screen_height);
         // TODO: move to separate function graphics_set_dimensions ?
-        graphics_set_buffer(&SCREEN[0][0], screen_width, screen_height);
+        graphics_set_buffer((uint8_t*)SCREEN, screen_width, screen_height);
         graphics_set_offset(screen_width != 320 ? 32 : 0, screen_height != 240 ? 8 : 0);
         gwenesis_vdp_render_config();
 
@@ -764,14 +765,9 @@ void __time_critical_func(emulate)() {
         system_clock = 0;
         sn76489_clock = 0;
         sn76489_index = 0;
-
-
-    ///    ym2612_clock = 0;
-    ///    ym2612_index = 0;
-
         scan_line = 0;
         if (z80_enabled)
-            z80_run(262 * VDP_CYCLES_PER_LINE);
+            z80_run((is_pal ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC) * VDP_CYCLES_PER_LINE);
 
         while (scan_line < lines_per_frame) {
             /* CPUs */
@@ -813,15 +809,17 @@ void __time_critical_func(emulate)() {
             if (!is_pal && scan_line == screen_height + 1) {
                 z80_irq_line(0);
                 // FRAMESKIP every 3rd frame
-                if (frameskip && frame % 3 == 0) {
-                    drawFrame = 0;
-                } else {
-                    drawFrame = 1;
-                }
+                drawFrame = frameskip && frame % 3 != 0;
+                // if (frameskip && frame % 3 == 0) {
+                //     drawFrame = 0;
+                // } else {
+                //     drawFrame = 1;
+                // }
             }
 
             system_clock += VDP_CYCLES_PER_LINE;
         }
+
         frame++;
         if (limit_fps) {
             frame_cnt++;
@@ -833,7 +831,10 @@ void __time_critical_func(emulate)() {
                 frame_cnt = 0;
             }
         }
-        gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
+#if HDMI | SOFTTV | TV
+        if (audio_enabled)
+            gwenesis_SN76489_run(REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC * VDP_CYCLES_PER_LINE);
+#endif
         // ym2612_run(262 * VDP_CYCLES_PER_LINE);
         /*
         gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
