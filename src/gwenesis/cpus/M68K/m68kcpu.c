@@ -289,7 +289,7 @@ void __time_critical_func(m68k_run)(unsigned int cycles)
 #ifdef LOGERROR
   error("[%d][%d] m68k run to %d cycles (%x), irq mask = %x (%x)\n", v_counter, m68k.cycles, cycles, m68k.pc,FLAG_INT_MASK, CPU_INT_LEVEL);
 #endif
-
+#pragma GCC unroll(4)
   while (m68k.cycles < cycles)
   {
     /* Set tracing accodring to T1. */

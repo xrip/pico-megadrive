@@ -635,7 +635,8 @@ void draw_line_aw(int line) {
     int wdwidth_x2 = (screen_width == 320 ? 128 : 64);
 
     unsigned int nt = base_w + row * wdwidth_x2 + Window_first / 4;
-#pragma GCC unroll(64)
+
+    #pragma GCC unroll(64)
     for (int i = Window_first / 8; i < Window_last / 8; ++i) {
         draw_pattern_planeA(end, FETCH16VRAM(nt), paty);
         nt += 2;
@@ -862,7 +863,7 @@ void draw_sprites(int line) {
  ******************************************************************************/
 //static unsigned short current_line[320];
 
-void gwenesis_vdp_render_config() {
+void __time_critical_func(gwenesis_vdp_render_config)() {
     mode_h40 = REG12_MODE_H40;
     mode_pal = REG1_PAL;
 
