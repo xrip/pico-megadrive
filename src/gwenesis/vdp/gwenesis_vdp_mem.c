@@ -64,12 +64,12 @@ void vdpm_log(const char *subs, const char *fmt, ...) {
 unsigned char VRAM[VRAM_MAX_SIZE];
 //unsigned char* VRAM = NULL;
 
-unsigned short CRAM[CRAM_MAX_SIZE];           // CRAM - Palettes
-unsigned char SAT_CACHE[SAT_CACHE_MAX_SIZE];  // Sprite cache
-unsigned char gwenesis_vdp_regs[REG_SIZE];    // Registers
-unsigned short fifo[FIFO_SIZE];               // Fifo
+unsigned short __scratch_y("s") CRAM[CRAM_MAX_SIZE];           // CRAM - Palettes
+unsigned char __scratch_y("s2") SAT_CACHE[SAT_CACHE_MAX_SIZE];  // Sprite cache
+unsigned char __scratch_y("s3") gwenesis_vdp_regs[REG_SIZE];    // Registers
+unsigned short __scratch_y("s5")fifo[FIFO_SIZE];               // Fifo
 //uint8_t CRAM222[CRAM_MAX_SIZE * 4];    // CRAM - Palettes
-unsigned short VSRAM[VSRAM_MAX_SIZE];         // VSRAM - Scrolling
+unsigned short __scratch_y("s4") VSRAM[VSRAM_MAX_SIZE];         // VSRAM - Scrolling
 
 // Define VDP control code and set initial code
 static unsigned char code_reg = 0;
