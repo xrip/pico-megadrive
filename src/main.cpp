@@ -53,7 +53,7 @@ int snd_output_volume = 9;
 int ym2612_index;                                                     /* ym2612 audio buffer index */
 int ym2612_clock;
 semaphore vga_start_semaphore;
-static uint8_t SCREEN[240*320+64];
+static uint8_t SCREEN[240][320];
 
 enum input_device {
     KEYBOARD,
@@ -341,7 +341,7 @@ typedef struct __attribute__((__packed__)) {
 } file_item_t;
 
 constexpr int max_files = 600;
-file_item_t* fileItems = (file_item_t *) (&SCREEN[0] + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
+file_item_t* fileItems = (file_item_t *) (&SCREEN[0][0] + TEXTMODE_COLS * TEXTMODE_ROWS * 2);
 
 int compareFileItems(const void* a, const void* b) {
     const auto* itemA = (file_item_t *) a;
@@ -823,6 +823,7 @@ void __time_critical_func(emulate)() {
 
             system_clock += VDP_CYCLES_PER_LINE;
         }
+
         frame++;
         if (limit_fps) {
             frame_cnt++;
