@@ -68,8 +68,8 @@ bool interlace = true;
 bool frameskip = true;
 bool flash_line = true;
 bool flash_frame = true;
-bool z80_enabled = false;
-bool sn76489_enabled = false;
+bool z80_enabled = true;
+bool sn76489_enabled = true;
 uint8_t player_1_input = GAMEPAD1;
 uint8_t player_2_input = KEYBOARD;
 
@@ -194,13 +194,14 @@ typedef struct __attribute__((__packed__)) {
     menu_type_e type;
     const void* value;
     menu_callback_t callback;
+    uint8_t min_value;
     uint8_t max_value;
     char value_list[15][10];
 } MenuItem;
 
 int save_slot = 0;
-uint16_t frequencies[] = {378, 396, 404, 408, 412, 416, 420, 424, 432};
-uint8_t frequency_index = 5;
+const uint16_t frequencies[] = {378, 396, 404, 408, 412, 416, 420, 424, 432};
+uint8_t frequency_index = 0;
 
 bool overclock() {
     hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
@@ -218,23 +219,24 @@ bool save() {
 
 
 const MenuItem menu_items[] = {
-    {"Player 1: %s",        ARRAY, &player_1_input, nullptr, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
-    {"Player 2: %s",        ARRAY, &player_2_input, nullptr, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
-    {"Frameskip: %s", ARRAY, &frameskip, nullptr, 1, {"NO ", "YES"}},
-    {"Interlace mode: %s", ARRAY, &interlace, nullptr, 1, {"NO ", "YES"}},
-    {"Sound: %s", ARRAY, &audio_enabled, nullptr, 1, {"Disabled", "Enabled "}},
-    {"Z80 emulation: %s", ARRAY, &z80_enabled, nullptr, 1, {"Disabled", "Enabled "}},
-    {"SN76489 chip: %s", ARRAY, &sn76489_enabled, nullptr, 1, {"Disabled", "Enabled "}},
+    {"Player 1: %s",        ARRAY, &player_1_input, nullptr, 0, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+    {"Player 2: %s",        ARRAY, &player_2_input, nullptr, 0, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+    {"Frameskip: %s", ARRAY, &frameskip, nullptr, 0, 1, {"NO ", "YES"}},
+    {"Interlace mode: %s", ARRAY, &interlace, nullptr, 0, 1, {"NO ", "YES"}},
+    {"Sound: %s", ARRAY, &audio_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
+    {"Z80 emulation: %s", ARRAY, &z80_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
+    {"SN76489 chip: %s", ARRAY, &sn76489_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
+    {"Sampling div: %s", ARRAY, &GWENESIS_AUDIO_SAMPLING_DIVISOR, nullptr, 0, 10, {"!", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}},
     {
-        "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
+        "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, 0, count_of(frequencies) - 1,
         {"378", "396", "404", "408", "412", "416", "420", "424", "432"}
     },
     // {},
     // { "Save state: %i", INT, &save_slot, &save, 5 },
     // { "Load state: %i", INT, &save_slot, &load, 5 },
     // { "" },
-    // { "Flash line: %s", ARRAY, &flash_line, nullptr, 1, { "NO ", "YES" } },
-    // { "Flash frame: %s", ARRAY, &flash_frame, nullptr, 1, { "NO ", "YES" } },
+    // { "Flash line: %s", ARRAY, &flash_line, nullptr, 0, 1, { "NO ", "YES" } },
+    // { "Flash frame: %s", ARRAY, &flash_frame, nullptr, 0, 1, { "NO ", "YES" } },
     {""},
     {"Reset to ROM select", ROM_SELECT},
     {"Return to game", RETURN}
@@ -273,7 +275,7 @@ void menu() {
                             if ((gamepad1_bits.right || keyboard_bits.right) && *value < item->max_value) {
                                 (*value)++;
                             }
-                            if ((gamepad1_bits.left || keyboard_bits.left) && *value > 0) {
+                            if ((gamepad1_bits.left || keyboard_bits.left) && *value > item->min_value) {
                                 (*value)--;
                             }
                         }
