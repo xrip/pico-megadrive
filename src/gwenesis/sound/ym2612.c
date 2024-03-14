@@ -2387,7 +2387,7 @@ void YM2612Update(int16_t *buffer, int length)
 }
 
 void ym2612_run(int target) {
-
+/**
   if ( ym2612_clock >= target) {
     return;
   }
@@ -2402,7 +2402,7 @@ void ym2612_run(int target) {
 
   } else {
     ym2612_index = ym2612_prev_index;
-  }
+  }*/
 }
 
 unsigned char *YM2612GetContextPtr(void)

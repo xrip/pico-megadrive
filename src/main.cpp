@@ -50,8 +50,8 @@ int sn76489_clock;                                                      /* sn786
 int audio_enabled = 1;
 int snd_output_volume = 9;
 ///int8_t gwenesis_ym2612_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
-int ym2612_index;                                                     /* ym2612 audio buffer index */
-int ym2612_clock;
+///int ym2612_index;                                                     /* ym2612 audio buffer index */
+///int ym2612_clock;
 semaphore vga_start_semaphore;
 static uint8_t SCREEN[240][320];
 
@@ -200,7 +200,7 @@ typedef struct __attribute__((__packed__)) {
 
 int save_slot = 0;
 uint16_t frequencies[] = {378, 396, 404, 408, 412, 416, 420, 424, 432};
-uint8_t frequency_index = 0;
+uint8_t frequency_index = 5;
 
 bool overclock() {
     hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
@@ -766,8 +766,8 @@ void __time_critical_func(emulate)() {
         sn76489_index = 0;
 
 
-        ym2612_clock = 0;
-        ym2612_index = 0;
+    ///    ym2612_clock = 0;
+    ///    ym2612_index = 0;
 
         scan_line = 0;
         if (z80_enabled)
