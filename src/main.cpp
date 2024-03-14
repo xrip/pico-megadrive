@@ -68,7 +68,8 @@ bool interlace = true;
 bool frameskip = true;
 bool flash_line = true;
 bool flash_frame = true;
-bool z80_enabled = true;
+bool z80_enabled = false;
+bool sn76489_enabled = false;
 uint8_t player_1_input = GAMEPAD1;
 uint8_t player_2_input = KEYBOARD;
 
@@ -217,12 +218,13 @@ bool save() {
 
 
 const MenuItem menu_items[] = {
-    //{"Player 1: %s",        ARRAY, &player_1_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
-    //{"Player 2: %s",        ARRAY, &player_2_input, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+    {"Player 1: %s",        ARRAY, &player_1_input, nullptr, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+    {"Player 2: %s",        ARRAY, &player_2_input, nullptr, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
     {"Frameskip: %s", ARRAY, &frameskip, nullptr, 1, {"NO ", "YES"}},
     {"Interlace mode: %s", ARRAY, &interlace, nullptr, 1, {"NO ", "YES"}},
     {"Sound: %s", ARRAY, &audio_enabled, nullptr, 1, {"Disabled", "Enabled "}},
     {"Z80 emulation: %s", ARRAY, &z80_enabled, nullptr, 1, {"Disabled", "Enabled "}},
+    {"SN76489 chip: %s", ARRAY, &sn76489_enabled, nullptr, 1, {"Disabled", "Enabled "}},
     {
         "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, count_of(frequencies) - 1,
         {"378", "396", "404", "408", "412", "416", "420", "424", "432"}

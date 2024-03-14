@@ -227,6 +227,7 @@ INLINE void gwenesis_SN76489_Update(INT16* buffer, int length) {
 
 /* SN76589 execution */
 extern int scan_line;
+extern bool sn76489_enabled;
 
 void YM2612Update(uint16_t *buffer, int length);
 
@@ -240,7 +241,7 @@ void gwenesis_SN76489_run(int target) {
     if (sn76489_index > sn76489_prev_index) {
         int16* buf = gwenesis_sn76489_buffer + sn76489_prev_index;
         int len = sn76489_index - sn76489_prev_index;
-        gwenesis_SN76489_Update(buf, len);
+        if (sn76489_enabled) gwenesis_SN76489_Update(buf, len);
         YM2612Update(buf, len);
         sn76489_clock = sn76489_index * gwenesis_SN76489.divisor;
     }

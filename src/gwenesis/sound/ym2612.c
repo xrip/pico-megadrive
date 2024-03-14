@@ -2257,6 +2257,8 @@ unsigned int YM2612Read(int target)
 return ym2612.OPN.ST.status & 0xff;
 }
 
+extern bool sn76489_enabled;
+
 /* Generate samples for ym2612 */
 void YM2612Update(int16_t *buffer, int length)
 {
@@ -2286,7 +2288,7 @@ void YM2612Update(int16_t *buffer, int length)
   refresh_fc_eg_chan(&ym2612.CH[3]);
   refresh_fc_eg_chan(&ym2612.CH[4]);
   refresh_fc_eg_chan(&ym2612.CH[5]);
-
+  bool inc_mode = sn76489_enabled;
   /* buffering */
   for(i=0; i < length ; i++)
   {
@@ -2357,7 +2359,8 @@ void YM2612Update(int16_t *buffer, int length)
     lt += out_fm[5];
 
     /* buffering */
-    *buffer++ += lt;
+    if (inc_mode) *buffer++ += lt;
+    else *buffer++ = lt;
     // *buffer++ += lt / (2 << (11 - snd_output_volume));
 
     /* CSM mode: if CSM Key ON has occured, CSM Key OFF need to be sent       */
