@@ -132,11 +132,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 
 #include "ym2612.h"
 #include "../bus/gwenesis_bus.h"
-#include "../savestate/gwenesis_savestate.h"
 
 #if GENERATE_TABLES
 #include "ff.h"
@@ -149,7 +147,6 @@ typedef uint8_t uint8;
 typedef int32_t INT32;
 typedef int16_t INT16;
 typedef int8_t INT8;
-#define INLINE static
 
 extern uint8_t snd_accurate;
 
@@ -171,12 +168,12 @@ void ym_log(const char *subs, const char *fmt, ...) {
   printf("\n");
 }
 #else
-	#define ym_log(...)  do {} while(0)
+	#define ym_log(...)
 #endif
 
 /* compiler dependence */
 #ifndef INLINE
-#define INLINE static __inline__
+#define INLINE static __always_inline
 #endif
 
 /* globals */
@@ -1124,9 +1121,9 @@ INLINE void advance_lfo()
       /* triangle */
       /* AM: 0 to 126 step +2, 126 to 0 step -2 */
       if (ym2612.OPN.lfo_cnt<64)
-        ym2612.OPN.LFO_AM = ym2612.OPN.lfo_cnt * 2;
+        ym2612.OPN.LFO_AM = __fast_mul(ym2612.OPN.lfo_cnt, 2);
       else
-        ym2612.OPN.LFO_AM = 126 - ((ym2612.OPN.lfo_cnt&63) * 2);
+        ym2612.OPN.LFO_AM = 126 - __fast_mul((ym2612.OPN.lfo_cnt&63), 2);
 
       /* PM works with 4 times slower clock */
       ym2612.OPN.LFO_PM = ym2612.OPN.lfo_cnt >> 2;
@@ -1183,7 +1180,7 @@ INLINE void advance_eg_channels(void)
               /* update attenuation level */
               if (SLOT->volume < 0x200)
               {
-                SLOT->volume += 4 * eg_inc[SLOT->eg_sel_d1r + ((eg_cnt>>SLOT->eg_sh_d1r)&7)];
+                SLOT->volume += __fast_mul(eg_inc[SLOT->eg_sel_d1r + ((eg_cnt>>SLOT->eg_sh_d1r)&7)], 4);
 
                 /* recalculate EG output */
                 if (SLOT->ssgn ^ (SLOT->ssg&0x04))   /* SSG-EG Output Inversion */
@@ -1218,7 +1215,7 @@ INLINE void advance_eg_channels(void)
               /* update attenuation level */
               if (SLOT->volume < 0x200)
               {
-                SLOT->volume += 4 * eg_inc[SLOT->eg_sel_d2r + ((eg_cnt>>SLOT->eg_sh_d2r)&7)];
+                SLOT->volume += __fast_mul(eg_inc[SLOT->eg_sel_d2r + ((eg_cnt>>SLOT->eg_sh_d2r)&7)], 4);
 
                 /* recalculate EG output */
                 if (SLOT->ssgn ^ (SLOT->ssg&0x04))   /* SSG-EG Output Inversion */
@@ -1253,7 +1250,7 @@ INLINE void advance_eg_channels(void)
             {
               /* update attenuation level */
               if (SLOT->volume < 0x200)
-                SLOT->volume += 4 * eg_inc[SLOT->eg_sel_rr + ((eg_cnt>>SLOT->eg_sh_rr)&7)];
+                SLOT->volume += __fast_mul(eg_inc[SLOT->eg_sel_rr + ((eg_cnt>>SLOT->eg_sh_rr)&7)], 4);
 
               /* check phase transition */
               if (SLOT->volume >= 0x200)
@@ -1821,7 +1818,7 @@ INLINE void OPNWriteReg(int r, int v)
         }
         case 1:    /* 0xb4-0xb6 : L , R , AMS , PMS (ym2612/YM2610B/YM2610/YM2608) */
           /* b0-2 PMS */
-          CH->pms = (v & 7) * 16; /* CH->pms = PM depth * 16 (index in lfo_pm_table) */
+          CH->pms = __fast_mul(v & 7, 16); /* CH->pms = PM depth * 16 (index in lfo_pm_table) */
 
           /* b4-5 AMS */
           CH->ams = lfo_ams_depth_shift[(v>>4) & 0x03];

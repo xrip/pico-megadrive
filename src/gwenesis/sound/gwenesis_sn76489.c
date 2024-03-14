@@ -30,15 +30,18 @@
 #include <stdint.h>
 #include <signal.h>
 #include <stdio.h>
-#include <math.h>
 #include <limits.h>
 #include "../bus/gwenesis_bus.h"
 #include "../sound/gwenesis_sn76489.h"
 
 #include <pico/platform.h>
 
-#include "../savestate/gwenesis_savestate.h"
-extern bool sound_enabled;
+extern int audio_enabled;
+
+/* compiler dependence */
+#ifndef INLINE
+#define INLINE static __always_inline
+#endif
 #define NoiseInitialState   0x8000  /* Initial state of shift register */
 #define PSG_CUTOFF          0x6     /* Value below which PSG does not output */
 // #define PSG_MAX_VOLUME 2800
@@ -132,7 +135,7 @@ int gwenesis_SN76489_GetContextSize(void) {
     return sizeof(SN76489_Context);
 }
 
-static inline void gwenesis_SN76489_Update(INT16* buffer, int length) {
+INLINE void gwenesis_SN76489_Update(INT16* buffer, int length) {
     int i, j;
 
 #pragma gcc unroll
@@ -247,7 +250,7 @@ void gwenesis_SN76489_run(int target) {
 }
 
 void gwenesis_SN76489_Write(int data, int target) {
-    if (!sound_enabled)
+    if (!audio_enabled)
         return;
 
     if (snd_accurate == 1)
