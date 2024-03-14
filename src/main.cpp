@@ -225,8 +225,8 @@ const MenuItem menu_items[] = {
     {"Interlace mode: %s", ARRAY, &interlace, nullptr, 0, 1, {"NO ", "YES"}},
     {"Sound: %s", ARRAY, &audio_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
     {"Z80 emulation: %s", ARRAY, &z80_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
-    {"SN76489 chip: %s", ARRAY, &sn76489_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
-    {"Sampling div: %s", ARRAY, &GWENESIS_AUDIO_SAMPLING_DIVISOR, nullptr, 0, 10, {"!", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}},
+    {"SN76489 chip: %s",  ARRAY, &sn76489_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
+    {"Sampling div: %s ", ARRAY, &GWENESIS_AUDIO_SAMPLING_DIVISOR, nullptr, 0, 10, {"!", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}},
     {
         "Overclocking: %s MHz", ARRAY, &frequency_index, &overclock, 0, count_of(frequencies) - 1,
         {"378", "396", "404", "408", "412", "416", "420", "424", "432"}
