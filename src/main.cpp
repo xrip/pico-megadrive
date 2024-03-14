@@ -34,7 +34,7 @@ extern "C" {
 
 #define HOME_DIR "\\SEGA"
 extern char __flash_binary_end;
-#define FLASH_TARGET_OFFSET (((((uintptr_t)&__flash_binary_end - XIP_BASE) / FLASH_SECTOR_SIZE) + 1) * FLASH_SECTOR_SIZE)
+#define FLASH_TARGET_OFFSET (((((uintptr_t)&__flash_binary_end - XIP_BASE) / FLASH_SECTOR_SIZE) + 4) * FLASH_SECTOR_SIZE)
 static const uintptr_t rom = XIP_BASE + FLASH_TARGET_OFFSET;
 char __uninitialized_ram(filename[256]);
 
@@ -64,7 +64,7 @@ enum input_device {
 // SETTINGS
 bool show_fps = true;
 bool limit_fps = true;
-bool interlace = false;
+bool interlace = true;
 bool frameskip = true;
 bool flash_line = true;
 bool flash_frame = true;
@@ -726,7 +726,7 @@ void __scratch_x("render") render_core() {
 
         if (audio_enabled && old_frame != frame ) {
 #if TFT | VGA
-            gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
+            gwenesis_SN76489_run(REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC * VDP_CYCLES_PER_LINE);
 #endif
             static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
             for (int h = 0; h < GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2; h++) {
@@ -771,7 +771,7 @@ void __time_critical_func(emulate)() {
 
         scan_line = 0;
         if (z80_enabled)
-            z80_run(262 * VDP_CYCLES_PER_LINE);
+            z80_run((is_pal ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC) * VDP_CYCLES_PER_LINE);
 
         while (scan_line < lines_per_frame) {
             /* CPUs */
@@ -835,9 +835,9 @@ void __time_critical_func(emulate)() {
                 frame_cnt = 0;
             }
         }
-#if HDMI
+#if HDMI | SOFTTV | TV
         if (audio_enabled)
-            gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
+            gwenesis_SN76489_run(REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC * VDP_CYCLES_PER_LINE);
 #endif
         // ym2612_run(262 * VDP_CYCLES_PER_LINE);
         /*
