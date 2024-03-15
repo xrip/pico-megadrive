@@ -220,7 +220,7 @@ bool save() {
 
 const MenuItem menu_items[] = {
     {"Player 1: %s",        ARRAY, &player_1_input, nullptr, 0, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
-    // {"Player 2: %s",        ARRAY, &player_2_input, nullptr, 0, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+    {"Player 2: %s",        ARRAY, &player_2_input, nullptr, 0, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
     {"Frameskip: %s", ARRAY, &frameskip, nullptr, 0, 1, {"NO ", "YES"}},
     {"Interlace mode: %s", ARRAY, &interlace, nullptr, 0, 1, {"NO ", "YES"}},
     {"Sound: %s", ARRAY, &audio_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
