@@ -81,7 +81,8 @@ int command_word_pending = 0;
 unsigned short gwenesis_vdp_status = 0x3C00;
 
 extern int scan_line;
-
+extern bool sn76489_enabled;
+extern bool audio_enabled;
 // Define DMA
 //static unsigned int dma_length;
 //static unsigned int dma_source;
@@ -414,7 +415,7 @@ void gwenesis_vdp_dma_fill(unsigned short value) {
                 uint8_t addr = (address_reg & 0x7f) >> 1;
                 CRAM[addr] = fifo[3];
 
-                graphics_set_palette(addr, RGB888(CRAM_R(fifo[3]), CRAM_G(fifo[3]), CRAM_B(fifo[3])));
+                graphics_set_palette(addr, RGB888(CRAM_R(CRAM[addr]), CRAM_G(CRAM[addr]), CRAM_B(CRAM[addr])));
 
                 address_reg += REG15_DMA_INCREMENT;
                 src_addr_low++;
@@ -889,7 +890,8 @@ void gwenesis_vdp_write_memory_16(unsigned int address, unsigned int value) {
     if (address < 0x18) {
         // PSG 8 bits write
         vdpm_log(__FUNCTION__, "PSG sclk=%d,mclk=%d", system_clock, m68k_cycles_master());
-        gwenesis_SN76489_Write(value, m68k_cycles_master());
+        if(audio_enabled && sn76489_enabled)
+            gwenesis_SN76489_Write(value, m68k_cycles_master());
         return;
     }
     // UNHANDLED
@@ -897,42 +899,8 @@ void gwenesis_vdp_write_memory_16(unsigned int address, unsigned int value) {
 }
 
 void gwenesis_vdp_mem_save_state() {
-    SaveState* state;
-    state = saveGwenesisStateOpenForWrite("vdp_mem");
-
-    saveGwenesisStateSetBuffer(state, "VRAM", VRAM, VRAM_MAX_SIZE);
-    saveGwenesisStateSetBuffer(state, "CRAM", CRAM, sizeof(CRAM));
-    saveGwenesisStateSetBuffer(state, "SAT_CACHE", SAT_CACHE, sizeof(SAT_CACHE));
-    saveGwenesisStateSetBuffer(state, "gwenesis_vdp_regs", gwenesis_vdp_regs, sizeof(gwenesis_vdp_regs));
-    saveGwenesisStateSetBuffer(state, "fifo", fifo, sizeof(fifo));
-    //    saveGwenesisStateSetBuffer(state, "CRAM565", CRAM222, sizeof(CRAM222));
-    saveGwenesisStateSetBuffer(state, "VSRAM", VSRAM, sizeof(VSRAM));
-    saveGwenesisStateSet(state, "code_reg", code_reg);
-    saveGwenesisStateSet(state, "address_reg", address_reg);
-    saveGwenesisStateSet(state, "command_word_pending", command_word_pending);
-    saveGwenesisStateSet(state, "gwenesis_vdp_status", gwenesis_vdp_status);
-    saveGwenesisStateSet(state, "dma_fill_pending", dma_fill_pending);
-    saveGwenesisStateSet(state, "hvcounter_latch", hvcounter_latch);
-    saveGwenesisStateSet(state, "hvcounter_latched", hvcounter_latched);
-    saveGwenesisStateSet(state, "hint_pending", hint_pending);
 }
 
 void gwenesis_vdp_mem_load_state() {
-    SaveState* state = saveGwenesisStateOpenForRead("vdp_mem");
 
-    saveGwenesisStateGetBuffer(state, "VRAM", VRAM, VRAM_MAX_SIZE);
-    saveGwenesisStateGetBuffer(state, "CRAM", CRAM, sizeof(CRAM));
-    saveGwenesisStateGetBuffer(state, "SAT_CACHE", SAT_CACHE, sizeof(SAT_CACHE));
-    saveGwenesisStateGetBuffer(state, "gwenesis_vdp_regs", gwenesis_vdp_regs, sizeof(gwenesis_vdp_regs));
-    saveGwenesisStateGetBuffer(state, "fifo", fifo, sizeof(fifo));
-    //    saveGwenesisStateGetBuffer(state, "CRAM565", CRAM222, sizeof(CRAM222));
-    saveGwenesisStateGetBuffer(state, "VSRAM", VSRAM, sizeof(VSRAM));
-    code_reg = saveGwenesisStateGet(state, "code_reg");
-    address_reg = saveGwenesisStateGet(state, "address_reg");
-    command_word_pending = saveGwenesisStateGet(state, "command_word_pending");
-    gwenesis_vdp_status = saveGwenesisStateGet(state, "gwenesis_vdp_status");
-    dma_fill_pending = saveGwenesisStateGet(state, "dma_fill_pending");
-    hvcounter_latch = saveGwenesisStateGet(state, "hvcounter_latch");
-    hvcounter_latched = saveGwenesisStateGet(state, "hvcounter_latched");
-    hint_pending = saveGwenesisStateGet(state, "hint_pending");
 }

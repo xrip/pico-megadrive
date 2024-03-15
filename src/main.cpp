@@ -68,7 +68,7 @@ bool interlace = true;
 bool frameskip = true;
 bool flash_line = true;
 bool flash_frame = true;
-bool z80_enabled = false;
+int z80_enable_mode = 2;
 bool sn76489_enabled = true;
 uint8_t player_1_input = GAMEPAD1;
 uint8_t player_2_input = KEYBOARD;
@@ -219,12 +219,12 @@ bool save() {
 
 
 const MenuItem menu_items[] = {
-    // {"Player 1: %s",        ARRAY, &player_1_input, nullptr, 0, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
+    {"Player 1: %s",        ARRAY, &player_1_input, nullptr, 0, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
     // {"Player 2: %s",        ARRAY, &player_2_input, nullptr, 0, 2, {"Keyboard ", "Gamepad 1", "Gamepad 2"}},
     {"Frameskip: %s", ARRAY, &frameskip, nullptr, 0, 1, {"NO ", "YES"}},
     {"Interlace mode: %s", ARRAY, &interlace, nullptr, 0, 1, {"NO ", "YES"}},
     {"Sound: %s", ARRAY, &audio_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
-    // {"Z80 emulation: %s", ARRAY, &z80_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
+    {"Z80 emulation: %s", ARRAY, &z80_enable_mode, nullptr, 0, 2, {"Disabled ", "Partial  ", "Full-lags"}},
     {"SN76489 chip: %s",  ARRAY, &sn76489_enabled, nullptr, 0, 1, {"Disabled", "Enabled "}},
     {"Sampling div: %s ", ARRAY, &GWENESIS_AUDIO_SAMPLING_DIVISOR, nullptr, 0, 10, {"!", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}},
     {
@@ -730,7 +730,7 @@ void __scratch_x("render") render_core() {
 
         if (audio_enabled && old_frame != frame ) {
 #if TFT | VGA
-            gwenesis_SN76489_run(REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC * VDP_CYCLES_PER_LINE);
+            gwenesis_SN76489_run(lines_per_frame * VDP_CYCLES_PER_LINE);
 #endif
             static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
             for (int h = 0; h < GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2; h++) {
@@ -770,14 +770,14 @@ void __time_critical_func(emulate)() {
         sn76489_clock = 0;
         sn76489_index = 0;
         scan_line = 0;
-        // if (z80_enabled)
-            // z80_run((is_pal ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC) * VDP_CYCLES_PER_LINE);
+         if (z80_enable_mode == 1)
+            z80_run(lines_per_frame * VDP_CYCLES_PER_LINE);
 
         while (scan_line < lines_per_frame) {
             /* CPUs */
             m68k_run(system_clock + VDP_CYCLES_PER_LINE);
-            if (z80_enabled)
-                    z80_run(system_clock * VDP_CYCLES_PER_LINE);
+            if (z80_enable_mode == 2)
+                    z80_run(system_clock + VDP_CYCLES_PER_LINE);
             /* Video */
             // Interlace mode
             if (drawFrame && !interlace || (frame % 2 == 0 && scan_line % 2) || scan_line % 2 == 0) {

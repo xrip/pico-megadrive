@@ -273,7 +273,6 @@ byte RdZ80(register word Addr) {
 
   if (Addr < 0x6000)
 	   return (audio_enabled) ? YM2612Read(zclk + current_timeslice - (cpu.ICount * Z80_FREQ_DIVISOR)) : 0x00;
-	return 0x00;
 
   z80_log(__FUNCTION__, "addr= %x", Addr);
 

@@ -62,7 +62,7 @@ void bus_log(const char *subs, const char *fmt, ...) {
 // Setup M68k memories ROM & RAM
 //#include "rom_manager.h"
 const unsigned char* ROM_DATA; // 68K Main Program (uncompressed)
-const unsigned char* ROM_METADATA; // 68K Main Program (uncompressed)
+// const unsigned char* ROM_METADATA; // 68K Main Program (uncompressed)
 //unsigned char* M68K_RAM=(void *)(uint32_t)(0); // 68K RAM
 //unsigned char* M68K_RAM = NULL; // 68K RAM
 unsigned char M68K_RAM[MAX_RAM_SIZE]; // 68K RAM
@@ -317,18 +317,16 @@ unsigned int gwenesis_bus_map_address(unsigned int address) {
     // Check mask and select memory type
     if (range < 0x80) //        ROM ADDRESS 0x000000 - 0x3FFFFF
         return ROM_ADDR;
-
-    else if (range == 0xA0) // Z80 ADDRESS 0xA00000 - 0xA0FFFF
+    if (range == 0xA0) // Z80 ADDRESS 0xA00000 - 0xA0FFFF
         return gwenesis_bus_map_z80_address(address);
-
-
-    else if (range == 0xA1) //                  IO ADDRESS  0xA10000 - 0xA1FFFF
+    if (range == 0xA1) //                  IO ADDRESS  0xA10000 - 0xA1FFFF
         return gwenesis_bus_map_io_address(address);
-
-    else if (range == 0xC0) // VDP ADDRESS 0xC00000 - 0xDFFFFFF
+    if (range == 0xC0) // VDP ADDRESS 0xC00000 - 0xDFFFFFF
         return VDP_ADDR;
-    else if (range == 0xFF) // RAM ADDRESS 0xE00000 - 0xFFFFFFF
+    if (range == 0xFF) // RAM ADDRESS 0xE00000 - 0xFFFFFFF
         return RAM_ADDR;
+
+
     // If not a valid address return 0
     bus_log(__FUNCTION__, "M68K > ?? unnmap address %x", address);
     //assert(0);
@@ -388,7 +386,6 @@ static inline unsigned int gwenesis_bus_read_memory_8(unsigned int address) {
 
 static inline unsigned int gwenesis_bus_read_memory_16(unsigned int address) {
     bus_log(__FUNCTION__, "read16 %x", address);
-    unsigned int ret_value;
 
     switch (gwenesis_bus_map_address(address)) {
         case VDP_ADDR:
@@ -414,14 +411,13 @@ static inline unsigned int gwenesis_bus_read_memory_16(unsigned int address) {
         case Z80_RAM_ADDR1K:
             return ZRAM[address & 0X1FFF] | (ZRAM[address & 0X1FFF] << 8);
 
-        case Z80_YM2612_ADDR:
+        case Z80_YM2612_ADDR: {
             if (audio_enabled) {
-                ret_value = YM2612Read(m68k_cycles_master());
+                unsigned int ret_value = YM2612Read(m68k_cycles_master());
                 return ret_value | ret_value << 8;
             }
-            else {
-                return 0x00;
-            }
+            return 0x00;
+        }
 
 
         case Z80_SN76489_ADDR:
@@ -505,6 +501,8 @@ static inline void gwenesis_bus_write_memory_8(unsigned int address,
     return;
 }
 
+extern bool sn76489_enabled;
+
 static inline void gwenesis_bus_write_memory_16(unsigned int address,
                                                 unsigned int value) {
     bus_log(__FUNCTION__, "write16  @%x:%x", address, value);
@@ -540,7 +538,8 @@ static inline void gwenesis_bus_write_memory_16(unsigned int address,
 
         case Z80_SN76489_ADDR:
             bus_log(__FUNCTION__, "CZSN16 ,mclk=%d", m68k_cycles_master());
-            gwenesis_SN76489_Write(value >> 8, m68k_cycles_master());
+            if (audio_enabled && sn76489_enabled)
+                gwenesis_SN76489_Write(value >> 8, m68k_cycles_master());
             return;
 
         default:
