@@ -148,7 +148,8 @@ typedef int32_t INT32;
 typedef int16_t INT16;
 typedef int8_t INT8;
 
-extern uint8_t snd_accurate;
+#define snd_accurate 0
+// extern uint8_t snd_accurate;
 
 #define YM2612_DISABLE_LOGGING 1
 

@@ -36,8 +36,6 @@
 
 #include <pico/platform.h>
 
-extern int audio_enabled;
-
 /* compiler dependence */
 #ifndef INLINE
 #define INLINE static __always_inline
@@ -77,7 +75,8 @@ static const int PSGVolumeValues[16] = {
     0
 };
 
-extern uint8_t snd_accurate;
+#define snd_accurate 0
+// extern uint8_t snd_accurate;
 
 
 static SN76489_Context gwenesis_SN76489;
@@ -251,9 +250,6 @@ void gwenesis_SN76489_run(int target) {
 }
 
 void gwenesis_SN76489_Write(int data, int target) {
-    if (!audio_enabled)
-        return;
-
     if (snd_accurate == 1)
         gwenesis_SN76489_run(target);
 

@@ -74,6 +74,8 @@ unsigned char TMSS[0x4];
 extern unsigned short gwenesis_vdp_status;
 
 extern int audio_enabled;
+extern int sn76489_enabled;
+
 
 // TMSS
 int tmss_state = 0;
@@ -475,7 +477,7 @@ static inline void gwenesis_bus_write_memory_8(unsigned int address,
 
         case Z80_SN76489_ADDR:
             bus_log(__FUNCTION__, "CPUZ80FM8  ,m68kclk= %d", m68k_cycles_master());
-            if (audio_enabled)
+            if (audio_enabled && sn76489_enabled)
                 gwenesis_SN76489_Write(value & 0Xff, m68k_cycles_master());
             return;
 
@@ -500,8 +502,6 @@ static inline void gwenesis_bus_write_memory_8(unsigned int address,
     }
     return;
 }
-
-extern bool sn76489_enabled;
 
 static inline void gwenesis_bus_write_memory_16(unsigned int address,
                                                 unsigned int value) {
