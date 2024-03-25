@@ -24,7 +24,7 @@ __license__ = "GPLv3"
 #include "gwenesis_io.h"
 #include "../savestate/gwenesis_savestate.h"
 
-unsigned char button_state[3]= {0xff,0xff,0xff};
+unsigned short button_state[3]= {0xff,0xff,0xff};
 
 /* Button mapping 
     7 6 5 4 3 2 1 0
