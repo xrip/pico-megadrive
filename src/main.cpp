@@ -66,8 +66,8 @@ bool show_fps = true;
 bool limit_fps = true;
 bool interlace = true;
 bool frameskip = true;
-bool flash_line = true;
-bool flash_frame = true;
+bool flash_line = false;
+bool flash_frame = false;
 int z80_enable_mode = 2;
 bool sn76489_enabled = true;
 uint8_t player_1_input = GAMEPAD1;
@@ -100,8 +100,8 @@ void nespad_tick() {
 
     gamepad1_bits.a = (nespad_state & DPAD_A) != 0;
     gamepad1_bits.b = (nespad_state & DPAD_B) != 0;
-    gamepad1_bits.c = (nespad_state & DPAD_SELECT) != 0;
-    gamepad1_bits.start = (nespad_state & DPAD_START) != 0;
+    gamepad1_bits.c = (nespad_state & DPAD_START) != 0;
+    gamepad1_bits.start = (nespad_state & DPAD_SELECT) != 0;
     gamepad1_bits.up = (nespad_state & DPAD_UP) != 0;
     gamepad1_bits.down = (nespad_state & DPAD_DOWN) != 0;
     gamepad1_bits.left = (nespad_state & DPAD_LEFT) != 0;
@@ -109,8 +109,8 @@ void nespad_tick() {
 
     gamepad2_bits.a = (nespad_state2 & DPAD_A) != 0;
     gamepad2_bits.b = (nespad_state2 & DPAD_B) != 0;
-    gamepad2_bits.c = (nespad_state2 & DPAD_SELECT) != 0;
-    gamepad2_bits.start = (nespad_state2 & DPAD_START) != 0;
+    gamepad2_bits.c = (nespad_state2 & DPAD_START) != 0;
+    gamepad2_bits.start = (nespad_state2 & DPAD_SELECT) != 0;
     gamepad2_bits.up = (nespad_state2 & DPAD_UP) != 0;
     gamepad2_bits.down = (nespad_state2 & DPAD_DOWN) != 0;
     gamepad2_bits.left = (nespad_state2 & DPAD_LEFT) != 0;
@@ -133,10 +133,10 @@ __not_in_flash_func(process_kbd_report)(hid_keyboard_report_t const* report, hid
         printf("%2.2X", i);
     printf("\r\n");
      */
-    keyboard_bits.c = isInReport(report, HID_KEY_ESCAPE);
-    keyboard_bits.mode = isInReport(report, HID_KEY_BACKSPACE);
+    keyboard_bits.mode = isInReport(report, HID_KEY_ESCAPE);
     keyboard_bits.a = isInReport(report, HID_KEY_A);
     keyboard_bits.b = isInReport(report, HID_KEY_S);
+    keyboard_bits.c = isInReport(report, HID_KEY_D);
     keyboard_bits.start = isInReport(report, HID_KEY_ENTER);
     keyboard_bits.x = isInReport(report, HID_KEY_Z);
     keyboard_bits.y = isInReport(report, HID_KEY_X);
@@ -281,12 +281,12 @@ void menu() {
                         }
                         break;
                     case RETURN:
-                        if (gamepad1_bits.start || keyboard_bits.start)
+                        if (gamepad1_bits.c || keyboard_bits.start)
                             exit = true;
                         break;
 
                     case ROM_SELECT:
-                        if (gamepad1_bits.start || keyboard_bits.start) {
+                        if (gamepad1_bits.c || keyboard_bits.start) {
                             reboot = true;
                             return;
                         }
@@ -295,7 +295,7 @@ void menu() {
                         break;
                 }
 
-                if (nullptr != item->callback && (gamepad1_bits.start || keyboard_bits.start)) {
+                if (nullptr != item->callback && (gamepad1_bits.c || keyboard_bits.start)) {
                     exit = item->callback();
                 }
             }
@@ -527,7 +527,7 @@ void filebrowser(const char pathname[256], const char executables[11]) {
             }
 
             // ESCAPE
-            if (nespad_state & DPAD_SELECT || keyboard_bits.c) {
+            if (nespad_state & DPAD_SELECT || keyboard_bits.mode) {
                 return;
             }
 
@@ -669,7 +669,7 @@ void gwenesis_io_get_buttons() {
 
     button_state[0] = ~button_state[0];
 
-    /*    button_state[2] = player2_state.left << PAD_LEFT |
+    button_state[1] = player2_state.left << PAD_LEFT |
                           player2_state.right << PAD_RIGHT |
                           player2_state.up << PAD_UP |
                           player2_state.down << PAD_DOWN |
@@ -677,10 +677,9 @@ void gwenesis_io_get_buttons() {
                           player2_state.a << PAD_A |
                           player2_state.b << PAD_B |
                           player2_state.c << PAD_C;
+        button_state[1] = ~button_state[1];
 
-        button_state[2] = ~button_state[2];*/
-
-    if ((gamepad1_bits.start && gamepad1_bits.c) || (keyboard_bits.start && keyboard_bits.mode)) {
+    if ((gamepad1_bits.start && gamepad1_bits.c) || keyboard_bits.mode) {
         menu();
     }
 }
@@ -706,7 +705,7 @@ void __scratch_x("render") render_core() {
     graphics_set_bgcolor(0x000000);
     graphics_set_offset(0, 0);
 
-    graphics_set_flashmode(true, true);
+    graphics_set_flashmode(false, false);
     sem_acquire_blocking(&vga_start_semaphore);
 
     // 60 FPS loop

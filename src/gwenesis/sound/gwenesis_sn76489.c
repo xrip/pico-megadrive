@@ -36,6 +36,8 @@
 
 #include <pico/platform.h>
 
+extern int audio_enabled;
+
 /* compiler dependence */
 #ifndef INLINE
 #define INLINE static __always_inline
@@ -75,8 +77,7 @@ static const int PSGVolumeValues[16] = {
     0
 };
 
-#define snd_accurate 0
-// extern uint8_t snd_accurate;
+extern uint8_t snd_accurate;
 
 
 static SN76489_Context gwenesis_SN76489;
@@ -142,14 +143,14 @@ INLINE void gwenesis_SN76489_Update(INT16* buffer, int length) {
 #pragma gcc unroll(2)
         for (i = 0; i <= 2; ++i)
             if (gwenesis_SN76489.IntermediatePos[i] != LONG_MIN)
-                gwenesis_SN76489.Channels[i] = PSGVolumeValues[gwenesis_SN76489.Registers[__fast_mul(i, 2) + 1]] *
-                                               gwenesis_SN76489.IntermediatePos[i] / 65536;
+                gwenesis_SN76489.Channels[i] = __mul_instruction(gwenesis_SN76489.IntermediatePos[i],
+                        PSGVolumeValues[gwenesis_SN76489.Registers[__fast_mul(i, 2) + 1]]
+                        ) / 65536;
             else
-                gwenesis_SN76489.Channels[i] = PSGVolumeValues[gwenesis_SN76489.Registers[__fast_mul(i, 2) + 1]] *
-                                               gwenesis_SN76489.ToneFreqPos[i];
+                gwenesis_SN76489.Channels[i] = __mul_instruction(gwenesis_SN76489.ToneFreqPos[i], PSGVolumeValues[gwenesis_SN76489.Registers[__fast_mul(i, 2) + 1]]);
 
-        gwenesis_SN76489.Channels[3] = (short)(PSGVolumeValues[gwenesis_SN76489.Registers[7]] * (
-                                                   gwenesis_SN76489.NoiseShiftRegister & 0x1));
+        gwenesis_SN76489.Channels[3] = (short)(__mul_instruction(PSGVolumeValues[gwenesis_SN76489.Registers[7]], (
+                                                   gwenesis_SN76489.NoiseShiftRegister & 0x1)));
 
         gwenesis_SN76489.Channels[3] <<= 1; /* Double noise volume to make some people happy */
 
@@ -175,22 +176,22 @@ INLINE void gwenesis_SN76489_Update(INT16* buffer, int length) {
         for (i = 0; i <= 2; ++i) {
             if (gwenesis_SN76489.ToneFreqVals[i] <= 0) {
                 /* If it gets below 0... */
-                if (gwenesis_SN76489.Registers[i * 2] > PSG_CUTOFF) {
+                if (gwenesis_SN76489.Registers[__fast_mul(i, 2)] > PSG_CUTOFF) {
                     /* Calculate how much of the sample is + and how much is - */
                     /* Go to floating point and include the clock fraction for extreme accuracy :D */
                     /* Store as long int, maybe it's faster? I'm not very good at this */
                     gwenesis_SN76489.IntermediatePos[i] = (long)(
-                        (gwenesis_SN76489.NumClocksForSample - gwenesis_SN76489.Clock + 2 * gwenesis_SN76489.
-                         ToneFreqVals[i]) * gwenesis_SN76489.ToneFreqPos[i] / (
-                            gwenesis_SN76489.NumClocksForSample + gwenesis_SN76489.Clock) * 65536);
+                        (gwenesis_SN76489.NumClocksForSample - gwenesis_SN76489.Clock +
+                            __fast_mul(gwenesis_SN76489.ToneFreqVals[i], 2)
+                            )
+                            * gwenesis_SN76489.ToneFreqPos[i] / (__fast_mul(gwenesis_SN76489.NumClocksForSample + gwenesis_SN76489.Clock,65536)));
                     gwenesis_SN76489.ToneFreqPos[i] = -gwenesis_SN76489.ToneFreqPos[i]; /* Flip the flip-flop */
                 }
                 else {
                     gwenesis_SN76489.ToneFreqPos[i] = 1; /* stuck value */
                     gwenesis_SN76489.IntermediatePos[i] = LONG_MIN;
                 }
-                gwenesis_SN76489.ToneFreqVals[i] += gwenesis_SN76489.Registers[i * 2] * (
-                    gwenesis_SN76489.NumClocksForSample / gwenesis_SN76489.Registers[i * 2] + 1);
+                gwenesis_SN76489.ToneFreqVals[i] += gwenesis_SN76489.Registers[__fast_mul(i,2)] * (gwenesis_SN76489.NumClocksForSample / gwenesis_SN76489.Registers[__fast_mul(i, 2)] + 1);
             }
             else gwenesis_SN76489.IntermediatePos[i] = LONG_MIN;
         }
@@ -200,8 +201,8 @@ INLINE void gwenesis_SN76489_Update(INT16* buffer, int length) {
             /* If it gets below 0... */
             gwenesis_SN76489.ToneFreqPos[3] = -gwenesis_SN76489.ToneFreqPos[3]; /* Flip the flip-flop */
             if (gwenesis_SN76489.NoiseFreq != 0x80) /* If not matching tone2, decrement counter */
-                gwenesis_SN76489.ToneFreqVals[3] += gwenesis_SN76489.NoiseFreq * (
-                    gwenesis_SN76489.NumClocksForSample / gwenesis_SN76489.NoiseFreq + 1);
+                gwenesis_SN76489.ToneFreqVals[3] += __mul_instruction(gwenesis_SN76489.NoiseFreq, (
+                    gwenesis_SN76489.NumClocksForSample / gwenesis_SN76489.NoiseFreq + 1));
             if (gwenesis_SN76489.ToneFreqPos[3] == 1) {
                 /* Only once per cycle... */
                 int Feedback;
@@ -242,7 +243,7 @@ void gwenesis_SN76489_run(int target) {
         int len = sn76489_index - sn76489_prev_index;
         if (sn76489_enabled) gwenesis_SN76489_Update(buf, len);
         YM2612Update(buf, len);
-        sn76489_clock = sn76489_index * gwenesis_SN76489.divisor;
+        sn76489_clock = __mul_instruction(sn76489_index, gwenesis_SN76489.divisor);
     }
     else {
         sn76489_index = sn76489_prev_index;
@@ -250,6 +251,9 @@ void gwenesis_SN76489_run(int target) {
 }
 
 void gwenesis_SN76489_Write(int data, int target) {
+    if (!audio_enabled)
+        return;
+
     if (snd_accurate == 1)
         gwenesis_SN76489_run(target);
 
