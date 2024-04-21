@@ -714,6 +714,8 @@ void __scratch_x("render") render_core() {
     uint64_t last_frame_tick = tick;
     int old_frame = 0;
 
+
+
     while (true) {
         if (tick >= last_frame_tick + frame_tick) {
 #ifdef TFT
