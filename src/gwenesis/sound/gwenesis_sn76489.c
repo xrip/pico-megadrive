@@ -34,7 +34,7 @@
 #include "../bus/gwenesis_bus.h"
 #include "../sound/gwenesis_sn76489.h"
 
-#include <pico/platform.h>
+#include <pico.h>
 
 extern int audio_enabled;
 

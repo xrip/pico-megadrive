@@ -207,9 +207,20 @@ const uint16_t frequencies[] = {378, 396, 404, 408, 412, 416, 420, 424, 432};
 uint8_t frequency_index = 0;
 
 bool overclock() {
-    hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
+#if PICO_RP2350
+    volatile uint32_t *qmi_m0_timing=(uint32_t *)0x400d000c;
+    vreg_disable_voltage_limit();
+    vreg_set_voltage(VREG_VOLTAGE_1_40);
     sleep_ms(10);
+    *qmi_m0_timing = 0x60007204;
+    set_sys_clock_khz(frequencies[frequency_index] * KHZ, false);
+    *qmi_m0_timing = 0x60007303;
+    return true;
+#else
+    hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
+    sleep_ms(33);
     return set_sys_clock_khz(frequencies[frequency_index] * KHZ, true);
+#endif
 }
 
 bool load() {

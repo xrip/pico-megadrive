@@ -19,7 +19,7 @@ __license__ = "GPLv3"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include <pico/platform.h>
+#include <pico.h>
 
 #include "../cpus/M68K/m68k.h"
 #include "gwenesis_vdp.h"

@@ -290,9 +290,9 @@ typedef struct
 /* 68k idle loop detection */
 typedef struct
 {
-  uint pc;
-  uint cycle;
-  uint detected;
+  unsigned int pc;
+  unsigned int cycle;
+  unsigned int detected;
 } cpu_idle_t;
 
 typedef struct
@@ -301,38 +301,38 @@ typedef struct
 
   cpu_idle_t poll;      /* polling detection */
 
-  uint cycles;          /* current master cycle count */ 
-  uint cycle_end;       /* aimed master cycle count for current execution frame */
+  unsigned int cycles;          /* current master cycle count */
+  unsigned int cycle_end;       /* aimed master cycle count for current execution frame */
 
-  uint dar[16];         /* Data and Address Registers */
-  uint pc;              /* Program Counter */
-  uint sp[5];           /* User and Interrupt Stack Pointers */
-  uint ir;              /* Instruction Register */
-  uint t1_flag;         /* Trace 1 */
-  uint s_flag;          /* Supervisor */
-  uint x_flag;          /* Extend */
-  uint n_flag;          /* Negative */
-  uint not_z_flag;      /* Zero, inverted for speedups */
-  uint v_flag;          /* Overflow */
-  uint c_flag;          /* Carry */
-  uint int_mask;        /* I0-I2 */
-  uint int_level;       /* State of interrupt pins IPL0-IPL2 -- ASG: changed from ints_pending */
-  uint stopped;         /* Stopped state */
+  unsigned int dar[16];         /* Data and Address Registers */
+  unsigned int pc;              /* Program Counter */
+  unsigned int sp[5];           /* User and Interrupt Stack Pointers */
+  unsigned int ir;              /* Instruction Register */
+  unsigned int t1_flag;         /* Trace 1 */
+  unsigned int s_flag;          /* Supervisor */
+  unsigned int x_flag;          /* Extend */
+  unsigned int n_flag;          /* Negative */
+  unsigned int not_z_flag;      /* Zero, inverted for speedups */
+  unsigned int v_flag;          /* Overflow */
+  unsigned int c_flag;          /* Carry */
+  unsigned int int_mask;        /* I0-I2 */
+  unsigned int int_level;       /* State of interrupt pins IPL0-IPL2 -- ASG: changed from ints_pending */
+  unsigned int stopped;         /* Stopped state */
 
-  uint pref_addr;       /* Last prefetch address */
-  uint pref_data;       /* Data in the prefetch queue */
+  unsigned int pref_addr;       /* Last prefetch address */
+  unsigned int pref_data;       /* Data in the prefetch queue */
 
-  uint instr_mode;      /* Stores whether we are in instruction mode or group 0/1 exception mode */
-  uint run_mode;        /* Stores whether we are processing a reset, bus error, address error, or something else */
-  uint aerr_enabled;    /* Enables/deisables address error checks at runtime */
+  unsigned int instr_mode;      /* Stores whether we are in instruction mode or group 0/1 exception mode */
+  unsigned int run_mode;        /* Stores whether we are processing a reset, bus error, address error, or something else */
+  unsigned int aerr_enabled;    /* Enables/deisables address error checks at runtime */
   jmp_buf aerr_trap;    /* Address error jump */
-  uint aerr_address;    /* Address error location */
-  uint aerr_write_mode; /* Address error write mode */
-  uint aerr_fc;         /* Address error FC code */
+  unsigned int aerr_address;    /* Address error location */
+  unsigned int aerr_write_mode; /* Address error write mode */
+  unsigned int aerr_fc;         /* Address error FC code */
 
-  uint tracing;         /* Tracing enable flag */
+  unsigned int tracing;         /* Tracing enable flag */
 
-  uint address_space;   /* Current FC code */
+  unsigned int address_space;   /* Current FC code */
 
 #ifdef M68K_OVERCLOCK_SHIFT
   int cycle_ratio;
