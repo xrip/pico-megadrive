@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
+set(PICO_BOARD_HEADER_DIRS ${CMAKE_CURRENT_LIST_DIR}/boards )
+set(PICO_BOARD "murmulator" CACHE STRING "Board type")
 include(pico_sdk_import.cmake)
 
 project(genesis C CXX ASM)
@@ -18,7 +20,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}  -funroll-loops  -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -O2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -funroll-loops  -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -O2")
 
-set(OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}")
+set(OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin/${PICO_PLATFORM}/${CMAKE_BUILD_TYPE}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
@@ -93,7 +95,7 @@ ELSE()
 ENDIF()
 
 IF(NOT I2S)
-	target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIO_PWM_PIN=26)
+	target_compile_definitions(${PROJECT_NAME} PRIVATE AUDIO_PWM)
 ELSEIF(I2S_CS4334)
 	target_compile_definitions(${PROJECT_NAME} PRIVATE I2S_CS4334)
 	SET(BUILD_NAME "${BUILD_NAME}-I2S-CS4334")
@@ -125,39 +127,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_flash
 
 		tinyusb_host
-)
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-		PICO_FLASH_SIZE_BYTES=16777216
-		# SDCARD
-		SDCARD_PIN_SPI0_CS=5
-		SDCARD_PIN_SPI0_SCK=2
-		SDCARD_PIN_SPI0_MOSI=3
-		SDCARD_PIN_SPI0_MISO=4
-
-		# PS2KBD
-		USE_PS2_KBD
-		PS2KBD_GPIO_FIRST=0
-
-		# NES Gamepad
-		USE_NESPAD
-		NES_GPIO_CLK=14
-		NES_GPIO_DATA=16
-		NES_GPIO_LAT=15
-
-		# VGA 8 pins starts from pin:
-		VGA_BASE_PIN=6
-
-		# HDMI 8 pins starts from pin:
-		HDMI_BASE_PIN=6
-
-		# TFT
-		TFT_CS_PIN=6
-		TFT_RST_PIN=8
-		TFT_LED_PIN=9
-		TFT_DC_PIN=10
-		TFT_DATA_PIN=12
-		TFT_CLK_PIN=13
 )
 
 target_link_options(${PROJECT_NAME} PRIVATE -Xlinker --print-memory-usage --data-sections)

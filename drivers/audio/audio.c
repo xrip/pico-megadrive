@@ -39,8 +39,8 @@ i2s_config_t i2s_get_default_config(void) {
     i2s_config_t i2s_config = {
 		.sample_freq = 44100, 
 		.channel_count = 2,
-		.data_pin = 26,
-		.clock_pin_base = 27,
+		.data_pin = AUDIO_DATA_PIN,
+		.clock_pin_base = AUDIO_CLOCK_PIN,
 		.pio = pio1,
 		.sm = 0,
         .dma_channel = 0,
