@@ -242,7 +242,7 @@ void gwenesis_SN76489_run(int target) {
         int16* buf = gwenesis_sn76489_buffer + sn76489_prev_index;
         int len = sn76489_index - sn76489_prev_index;
         if (sn76489_enabled) gwenesis_SN76489_Update(buf, len);
-        YM2612Update(buf, len);
+        // YM2612Update(buf, len);
         sn76489_clock = __mul_instruction(sn76489_index, gwenesis_SN76489.divisor);
     }
     else {

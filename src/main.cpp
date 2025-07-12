@@ -49,9 +49,9 @@ int sn76489_clock;                                                      /* sn786
 
 int audio_enabled = 1;
 int snd_output_volume = 9;
-///int8_t gwenesis_ym2612_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
-///int ym2612_index;                                                     /* ym2612 audio buffer index */
-///int ym2612_clock;
+int16_t gwenesis_ym2612_buffer[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];  //GWENESIS_AUDIO_BUFFER_LENGTH_PAL];
+int ym2612_index;                                                     /* ym2612 audio buffer index */
+int ym2612_clock;
 semaphore vga_start_semaphore;
 static uint8_t SCREEN[240][320];
 
@@ -746,10 +746,11 @@ void __scratch_x("render") render_core() {
         if (audio_enabled && old_frame != frame ) {
 #if TFT | VGA
             gwenesis_SN76489_run(lines_per_frame * VDP_CYCLES_PER_LINE);
+            gwenesis_ym2612_run(lines_per_frame * VDP_CYCLES_PER_LINE);
 #endif
             static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
             for (int h = 0; h < GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2; h++) {
-                snd_buf[h] = (gwenesis_sn76489_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR]);
+                snd_buf[h] = (gwenesis_sn76489_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR] + gwenesis_ym2612_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR]);
             }
             // memcpy(snd_buf, gwenesis_sn76489_buffer, GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2);
             i2s_dma_write(&i2s_config, snd_buf);
@@ -784,6 +785,8 @@ void __time_critical_func(emulate)() {
         system_clock = 0;
         sn76489_clock = 0;
         sn76489_index = 0;
+        ym2612_clock = 0;
+        ym2612_index = 0;
         scan_line = 0;
          if (z80_enable_mode == 1)
             z80_run(lines_per_frame * VDP_CYCLES_PER_LINE);
@@ -851,18 +854,11 @@ void __time_critical_func(emulate)() {
             }
         }
 #if HDMI | SOFTTV | TV
-        if (audio_enabled)
+        if (audio_enabled) {
             gwenesis_SN76489_run(REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC * VDP_CYCLES_PER_LINE);
-#endif
-        // ym2612_run(262 * VDP_CYCLES_PER_LINE);
-        /*
-        gwenesis_SN76489_run(262 * VDP_CYCLES_PER_LINE);
-        ym2612_run(262 * VDP_CYCLES_PER_LINE);
-        static int16_t snd_buf[GWENESIS_AUDIO_BUFFER_LENGTH_NTSC * 2];
-        for (int h = 0; h < ym2612_index * 2 * GWENESIS_AUDIO_SAMPLING_DIVISOR; h++) {
-            snd_buf[h] = (gwenesis_sn76489_buffer[h / 2 / GWENESIS_AUDIO_SAMPLING_DIVISOR]) << 3;
+            gwenesis_ym2612_run(REG1_PAL ? LINES_PER_FRAME_PAL : LINES_PER_FRAME_NTSC * VDP_CYCLES_PER_LINE);
         }
-        i2s_dma_write(&i2s_config, snd_buf);*/
+#endif
         // reset m68k cycles to the begin of next frame cycle
         m68k.cycles -= system_clock;
 
@@ -880,7 +876,7 @@ int main() {
     multicore_launch_core1(render_core);
     sem_release(&vga_start_semaphore);
 
- //   memset(gwenesis_ym2612_buffer, 0, sizeof(gwenesis_ym2612_buffer));
+    memset(gwenesis_ym2612_buffer, 0, sizeof(gwenesis_ym2612_buffer));
     memset(gwenesis_sn76489_buffer, 0, sizeof(gwenesis_sn76489_buffer));
 
     gpio_init(PICO_DEFAULT_LED_PIN);

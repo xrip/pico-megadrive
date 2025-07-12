@@ -2111,10 +2111,10 @@ void YM2612ResetChip(void) {
 /* n = number  */
 /* a = address */
 /* v = value   */
-void YM2612Write(unsigned int a, unsigned int v, int target) {
+void YM2612Write(unsigned int a, unsigned int v) {
     //Sync
     if (snd_accurate == 1)
-        ym2612_run(target);
+        gwenesis_ym2612_run(m68k_get_cycles());
 
     v &= 0xff; /* adjust to 8 bit bus */
 
@@ -2154,10 +2154,10 @@ void YM2612Write(unsigned int a, unsigned int v, int target) {
     }
 }
 
-unsigned int YM2612Read(int target) {
+unsigned int YM2612Read() {
     // //Sync
     if (snd_accurate == 1)
-        ym2612_run(target);
+        gwenesis_ym2612_run(m68k_get_cycles());
 
     return ym2612.OPN.ST.status & 0xff;
 }
@@ -2189,7 +2189,6 @@ void YM2612Update(int16_t* buffer, int length) {
     refresh_fc_eg_chan(&ym2612.CH[3]);
     refresh_fc_eg_chan(&ym2612.CH[4]);
     refresh_fc_eg_chan(&ym2612.CH[5]);
-    bool inc_mode = sn76489_enabled;
     /* buffering */
     for (i = 0; i < length; i++) {
         /* clear outputs */
@@ -2256,8 +2255,7 @@ void YM2612Update(int16_t* buffer, int length) {
         lt += out_fm[5];
 
         /* buffering */
-        if (inc_mode) *buffer++ += lt;
-        else *buffer++ = lt;
+        *buffer++ = lt;
         // *buffer++ += lt / (2 << (11 - snd_output_volume));
 
         /* CSM mode: if CSM Key ON has occured, CSM Key OFF need to be sent       */
@@ -2282,24 +2280,6 @@ void YM2612Update(int16_t* buffer, int length) {
     INTERNAL_TIMER_B(length);
 }
 
-void ym2612_run(int target) {
-    /**
-      if ( ym2612_clock >= target) {
-        return;
-      }
-
-      target /= GWENESIS_AUDIO_SAMPLING_DIVISOR;
-
-      int ym2612_prev_index = ym2612_index;
-      ym2612_index += (target-ym2612_clock) / ym2612.divisor;
-      if (ym2612_index > ym2612_prev_index) {
-        YM2612Update(gwenesis_sn76489_buffer + ym2612_prev_index, ym2612_index - ym2612_prev_index);
-        ym2612_clock = ym2612_index*ym2612.divisor;
-
-      } else {
-        ym2612_index = ym2612_prev_index;
-      }*/
-}
 
 unsigned char* YM2612GetContextPtr(void) {
     return (unsigned char *)&ym2612;
